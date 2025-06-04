@@ -1,25 +1,35 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Landing from './pages/Landing';  // New landing page
+import Login from './components/Login';
+import Register from './components/Register';
+import Dashboard from './pages/Dashboard';
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const isAuthenticated = !!token;
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login setToken={setToken} />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected Routes */}
+        {isAuthenticated ? (
+          <Route path="/dashboard" element={<Dashboard />} />
+        ) : (
+          <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+        )}
+
+        {/* Catch-All */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
 export default App;
+
