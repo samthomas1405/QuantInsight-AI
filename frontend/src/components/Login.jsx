@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { loginUser } from '../api/auth';
+import { loginUser, fetchUserInfo } from '../api/auth';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Login = ({ setToken }) => {
@@ -14,9 +14,18 @@ const Login = ({ setToken }) => {
     setLoading(true);
     try {
       const response = await loginUser({ email, password });
-      localStorage.setItem('token', response.data.access_token);
-      setToken(response.data.access_token);
-      navigate('/dashboard');
+      const token = response.data.access_token;
+      localStorage.setItem('token', token);
+      setToken(token);
+      // Fetch user info
+      const profileRes = await fetchUserInfo(token);
+      const hasCompletedSetup = profileRes.data.has_completed_setup;
+      // Redirect based on setup status
+      if (hasCompletedSetup) {
+        navigate('/dashboard');
+      } else {
+        navigate('/select-stocks');
+      }
     } catch {
       setError('Invalid credentials');
     } finally {

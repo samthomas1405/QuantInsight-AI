@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
+from typing import List
+from .stock import StockOut
 
 class UserBase(BaseModel):
     email: EmailStr
@@ -17,6 +19,7 @@ class UserLogin(BaseModel):
 class UserOut(UserBase):
     id: int
     created_at: datetime
+    followed_stocks: List[StockOut] = []
 
     class Config:
         orm_mode = True

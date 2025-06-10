@@ -4,6 +4,8 @@ import Landing from './pages/Landing';  // New landing page
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './pages/Dashboard';
+import StockSelection from './pages/StockSelection';
+
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -19,10 +21,17 @@ function App() {
 
         {/* Protected Routes */}
         {isAuthenticated ? (
-          <Route path="/dashboard" element={<Dashboard />} />
+          <>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/select-stocks" element={<StockSelection />} />
+          </>
         ) : (
-          <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+          <>
+            <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+            <Route path="/select-stocks" element={<Navigate to="/login" replace />} />
+          </>
         )}
+
 
         {/* Catch-All */}
         <Route path="*" element={<Navigate to="/" replace />} />
