@@ -19,25 +19,41 @@ const StockSelection = () => {
     headers: { Authorization: `Bearer ${token}` }
   };
 
-  const handleSearch = async () => {
-    const res = await axios.get(`/user/stocks/search?q=${search}`, headers);
-    setResults(res.data);
-  };
+  // 🔁 Live search on input (debounced)
+  useEffect(() => {
+    const delay = setTimeout(async () => {
+      if (search.trim() === '') {
+        setResults([]);
+        return;
+      }
+      try {
+        const res = await axios.get(`/user/stocks/search?q=${search}`, headers);
+        setResults(res.data);
+      } catch {
+        setResults([]);
+      }
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(delay);
+  }, [search]);
 
   const handleFollow = async (symbol) => {
-    await axios.post(`/user/stocks?symbol=${symbol}`, null, headers);
-    setFollowed(prev => [...prev, symbol]);
+    try {
+      await axios.post(`/user/stocks?symbol=${symbol}`, null, headers);
+      setFollowed(prev => [...prev, symbol]);
+    } catch (err) {
+      console.error("Failed to follow stock:", symbol);
+    }
   };
 
   const handleNext = async () => {
     try {
-        await axios.post('/auth/complete-setup', {}, headers);
-        navigate('/dashboard');
+      await axios.post('/auth/complete-setup', {}, headers);
+      navigate('/dashboard');
     } catch (err) {
-        console.error("Failed to complete setup");
+      console.error("Failed to complete setup");
     }
   };
-
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
@@ -46,14 +62,11 @@ const StockSelection = () => {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search stocks..."
+          placeholder="Search stocks by name or symbol..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="p-2 rounded bg-gray-800 text-white border border-gray-600 w-64"
         />
-        <button onClick={handleSearch} className="ml-2 px-4 py-2 bg-cyan-600 rounded hover:bg-cyan-500">
-          Search
-        </button>
       </div>
 
       <div className="mb-6">
