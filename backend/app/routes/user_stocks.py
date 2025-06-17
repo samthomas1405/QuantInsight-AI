@@ -16,25 +16,26 @@ def add_stock_to_user(symbol: str, db: Session = Depends(get_db), current_user: 
     stock = db.query(Stock).filter_by(symbol=symbol).first()
     if not stock:
         raise HTTPException(status_code=404, detail="Stock not found")
-    if stock in current_user.stocks:
+    if stock in current_user.followed_stocks:
         raise HTTPException(status_code=400, detail="Stock already followed")
-    current_user.stocks.append(stock)
+    current_user.followed_stocks.append(stock)
     db.commit()
     return {"message": f"Stock {symbol} added."}
 
 @router.delete("/{symbol}")
 def remove_stock_from_user(symbol: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     stock = db.query(Stock).filter_by(symbol=symbol).first()
-    if not stock or stock not in current_user.stocks:
+    if not stock or stock not in current_user.followed_stocks:
         raise HTTPException(status_code=404, detail="Stock not followed")
-    current_user.stocks.remove(stock)
+    current_user.followed_stocks.remove(stock)
     db.commit()
     return {"message": f"Stock {symbol} removed."}
 
 @router.get("/search")
 def search_stocks(q: str, db: Session = Depends(get_db)):
+    q = q.strip()
     results = db.query(Stock).filter(
-        (Stock.symbol.ilike(f"%{q}%")) | (Stock.name.ilike(f"%{q}%"))
+        (Stock.symbol.ilike(f"{q}%")) | (Stock.name.ilike(f"{q}%"))
     ).limit(20).all()
     return results
 

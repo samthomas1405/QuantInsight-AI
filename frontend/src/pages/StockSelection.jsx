@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { searchStocks, followStock, completeUserSetup } from '../api/stock'; // adjust path if needed
 
 const popularStocks = ["AAPL", "GOOGL", "AMZN", "MSFT", "TSLA", "NVDA", "META", "BRK.B", "JPM", "V"];
 
@@ -8,18 +8,14 @@ const StockSelection = () => {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState([]);
   const [followed, setFollowed] = useState([]);
+  const [token] = useState(() => localStorage.getItem('token')); // ✅ extracted as state
+
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
 
   useEffect(() => {
-    if (!token) return navigate('/login');
-  }, [token, navigate]);
+    if (!token) navigate('/login');
+  }, [token, navigate]); // ✅ clean ESLint dependency array
 
-  const headers = {
-    headers: { Authorization: `Bearer ${token}` }
-  };
-
-  // 🔁 Live search on input (debounced)
   useEffect(() => {
     const delay = setTimeout(async () => {
       if (search.trim() === '') {
@@ -27,19 +23,18 @@ const StockSelection = () => {
         return;
       }
       try {
-        const res = await axios.get(`/user/stocks/search?q=${search}`, headers);
+        const res = await searchStocks(search, token);
         setResults(res.data);
       } catch {
         setResults([]);
       }
-    }, 300); // 300ms debounce
-
+    }, 300);
     return () => clearTimeout(delay);
-  }, [search]);
+  }, [search, token]); // ✅ include token since it's now reactive
 
   const handleFollow = async (symbol) => {
     try {
-      await axios.post(`/user/stocks?symbol=${symbol}`, null, headers);
+      await followStock(symbol, token);
       setFollowed(prev => [...prev, symbol]);
     } catch (err) {
       console.error("Failed to follow stock:", symbol);
@@ -48,7 +43,7 @@ const StockSelection = () => {
 
   const handleNext = async () => {
     try {
-      await axios.post('/auth/complete-setup', {}, headers);
+      await completeUserSetup(token);
       navigate('/dashboard');
     } catch (err) {
       console.error("Failed to complete setup");

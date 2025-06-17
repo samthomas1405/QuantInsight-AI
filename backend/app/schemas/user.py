@@ -19,6 +19,7 @@ class UserLogin(BaseModel):
 class UserOut(UserBase):
     id: int
     created_at: datetime
+    has_completed_setup: bool  # ✅ Add this
     followed_stocks: List[StockOut] = []
 
     class Config:

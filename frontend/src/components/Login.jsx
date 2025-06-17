@@ -20,6 +20,7 @@ const Login = ({ setToken }) => {
       // Fetch user info
       const profileRes = await fetchUserInfo(token);
       const hasCompletedSetup = profileRes.data.has_completed_setup;
+      console.log(hasCompletedSetup);
       // Redirect based on setup status
       if (hasCompletedSetup) {
         navigate('/dashboard');
