@@ -35,3 +35,22 @@ def get_followed_stock_prices(
     # Limit to 30 symbols per API call
     limited = symbols[:30]
     return fetch_live_prices(limited)
+
+@router.get("/history/{symbol}")
+def get_stock_history(symbol: str):
+    url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval=1min&outputsize=5000&apikey={API_KEY}"
+    try:
+        response = requests.get(url)
+        data = response.json()
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch stock data.")
+
+    if "values" not in data:
+        raise HTTPException(status_code=500, detail=data.get("message", "No data returned."))
+
+    return [
+        {
+            "timestamp": item["datetime"],
+            "price": float(item["close"])
+        } for item in reversed(data["values"])
+    ]

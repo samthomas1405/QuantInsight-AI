@@ -1,42 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { fetchLiveFollowedMarketData } from '../api/liveMarket';
+import StockChart from './StockChart'; // Import the chart component
 
 const MarketDataTable = () => {
-  const [data, setData] = useState([]);
+  const [data, setData] = useState({});
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
-  const token = localStorage.getItem('token');
-  if (!token) return;
+    if (!token) return;
+    fetchLiveFollowedMarketData(token)
+      .then(setData)
+      .catch(err => console.error("Failed to load market data", err));
+  }, [token]);
 
-  const loadMarketData = async () => {
-    try {
-      const res = await fetchLiveFollowedMarketData(token);
-      console.log("Fetched live market data:", res);
-
-      // If Twelve Data returns a single object for one symbol, wrap it in an array
-      const formatted = Array.isArray(res)
-        ? res
-        : Object.keys(res).map((symbol) => ({
-            id: symbol,
-            symbol,
-            price: parseFloat(res[symbol].price),
-            timestamp: new Date().toISOString(), // or use res[symbol].datetime if available
-          }));
-
-      setData(formatted);
-    } catch (err) {
-      console.error("Failed to load followed market data", err);
-    }
-  };
-
-  loadMarketData();
-}, []);
-
+  const stocks = Array.isArray(data) ? data : Object.entries(data).map(([symbol, value]) => ({
+    symbol,
+    price: parseFloat(value.price),
+    timestamp: new Date().toISOString(),
+  }));
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">Your Followed Stocks</h2>
-      <table className="min-w-full bg-white text-black border border-gray-300 rounded shadow">
+      <h2 className="text-2xl font-semibold mb-4 text-white">📈 Your Followed Stocks</h2>
+
+      {/* Table Summary */}
+      <table className="min-w-full bg-white text-black border border-gray-300 rounded shadow mb-6">
         <thead className="bg-gray-100">
           <tr>
             <th className="py-2 px-4 border-b">Symbol</th>
@@ -45,17 +33,23 @@ const MarketDataTable = () => {
           </tr>
         </thead>
         <tbody>
-          {data.map((item) => (
-            <tr key={item.id}>
+          {stocks.map((item) => (
+            <tr key={item.symbol}>
               <td className="py-2 px-4 border-b">{item.symbol}</td>
               <td className="py-2 px-4 border-b">${item.price.toFixed(2)}</td>
-              <td className="py-2 px-4 border-b">{new Date(item.timestamp).toLocaleString()}</td>
+              <td className="py-2 px-4 border-b">{new Date(item.timestamp).toLocaleTimeString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {/* Per-Stock Line Charts */}
+      {stocks.map((item) => (
+        <StockChart key={item.symbol} symbol={item.symbol} />
+      ))}
     </div>
   );
 };
 
 export default MarketDataTable;
+

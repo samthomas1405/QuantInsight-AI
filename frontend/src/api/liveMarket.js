@@ -11,3 +11,8 @@ export const fetchLiveFollowedMarketData = async (token) => {
   });
   return response.data;
 };
+
+export const fetchStockHistory = async (symbol) => {
+  const res = await axios.get(`${API_URL}/history/${symbol}`);
+  return res.data;
+};
