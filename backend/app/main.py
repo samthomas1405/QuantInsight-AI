@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+import os
+import debugpy
 from app.db import Base, engine
 from app.routes import market_data, news, sentiment, audio, live_market, auth, user_stocks
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,7 +21,7 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(market_data.router, prefix="/market-data", tags=["Market Data"])
-app.include_router(news.router, prefix="/news", tags=["News"])
+app.include_router(news.router, prefix="/news")
 app.include_router(sentiment.router, prefix="/sentiment", tags=["Sentiment"])
 app.include_router(audio.router, prefix="/audio", tags=["Audio"])
 app.include_router(live_market.router)

@@ -12,4 +12,5 @@ class NewsArticle(Base):
     published_at = Column(DateTime)
     source = Column(String)
     content = Column(Text)
-    summary = Column(Text)  # Optional summarization
+    summary = Column(Text)
+    ticker = Column(String)

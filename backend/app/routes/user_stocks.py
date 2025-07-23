@@ -7,9 +7,16 @@ from app.models.stock import Stock
 
 router = APIRouter(prefix="/user/stocks", tags=["UserStocks"])
 
+def get_followed_stock_symbols(user_id: int, db: Session):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return []
+    return [stock.symbol for stock in user.followed_stocks]
+
 @router.get("/")
 def get_user_stocks(current_user: User = Depends(get_current_user)):
     return current_user.stocks
+
 
 @router.post("/")
 def add_stock_to_user(symbol: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -62,3 +69,11 @@ def initialize_popular_stocks(db: Session = Depends(get_db)):
             db.add(Stock(**stock_data))
     db.commit()
     return {"message": "Popular stocks initialized/updated successfully."}
+
+@router.get("/symbols")
+def get_user_stock_symbols(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    symbols = get_followed_stock_symbols(current_user.id, db)
+    return {"symbols": symbols}

@@ -1,14 +1,21 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserInfo } from '../api/auth';
-
 import MarketDataTable from '../components/MarketDataTable';
 import NewsFeed from '../components/NewsFeed';
 import SentimentAnalyzer from '../components/SentimentAnalyzer';
 import AudioUploader from '../components/AudioUploader';
 import UserAvatarMenu from '../components/UserAvatarMenu';
+import { fetchUserInfo } from '../api/auth';
+
+const TABS = [
+  { label: "Live Market Data", icon: "📈", component: <MarketDataTable /> },
+  { label: "Multi-Agent Predictor", icon: "🧠", component: <NewsFeed /> },
+  { label: "Sentiment Analyzer", icon: "💬", component: <SentimentAnalyzer /> },
+  { label: "Transcriber", icon: "🎙️", component: <AudioUploader /> },
+];
 
 const Dashboard = () => {
+  const [activeTab, setActiveTab] = useState(0);
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
@@ -18,7 +25,6 @@ const Dashboard = () => {
       navigate('/login');
       return;
     }
-
     fetchUserInfo(token)
       .then(res => setUser(res.data))
       .catch(() => {
@@ -37,47 +43,35 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Top Navigation Bar */}
-      <header className="flex justify-between items-center bg-gray-800 px-6 py-4 shadow">
-        <h1 className="text-2xl font-bold text-cyan-400">QuantInsight AI</h1>
-        <UserAvatarMenu
-          firstName={user.first_name}
-          lastName={user.last_name}
-          email={user.email}
-        />
-      </header>
-
-      {/* Main Dashboard */}
-      <main className="px-6 py-8 max-w-7xl mx-auto space-y-8">
-        <h2 className="text-3xl font-semibold text-cyan-400">Welcome back, {user.first_name}!</h2>
-
-        {/* Grid Layout for Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-2 gap-6">
-          {/* Market Data Section */}
-          <section className="bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-700">
-            <h3 className="text-xl font-semibold text-cyan-300 mb-4">📈 Market Data</h3>
-            <MarketDataTable />
-          </section>
-
-          {/* News Feed Section */}
-          <section className="bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-700">
-            <h3 className="text-xl font-semibold text-cyan-300 mb-4">📰 Financial News</h3>
-            <NewsFeed />
-          </section>
-
-          {/* Sentiment Analyzer Section */}
-          <section className="bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-700">
-            <h3 className="text-xl font-semibold text-cyan-300 mb-4">🧠 Sentiment Analyzer</h3>
-            <SentimentAnalyzer />
-          </section>
-
-          {/* Audio Uploader Section */}
-          <section className="bg-gray-800 rounded-2xl p-5 shadow-lg border border-gray-700">
-            <h3 className="text-xl font-semibold text-cyan-300 mb-4">🎙️ Upload Audio Commentary</h3>
-            <AudioUploader />
-          </section>
+    <div className="flex min-h-screen bg-gray-900 text-white">
+      {/* Sidebar */}
+      <nav className="w-64 bg-gray-800 flex flex-col py-8 px-4 space-y-2 shadow-lg">
+        <h1 className="text-2xl font-bold text-cyan-400 mb-8">QuantInsight AI</h1>
+        {TABS.map((tab, idx) => (
+          <button
+            key={tab.label}
+            className={`flex items-center px-4 py-3 rounded-lg text-lg font-medium transition ${
+              activeTab === idx
+                ? "bg-cyan-600 text-white"
+                : "hover:bg-gray-700 text-cyan-200"
+            }`}
+            onClick={() => setActiveTab(idx)}
+          >
+            <span className="mr-3 text-2xl">{tab.icon}</span>
+            {tab.label}
+          </button>
+        ))}
+        <div className="mt-auto">
+          <UserAvatarMenu
+            firstName={user.first_name}
+            lastName={user.last_name}
+            email={user.email}
+          />
         </div>
+      </nav>
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        {TABS[activeTab].component}
       </main>
     </div>
   );
