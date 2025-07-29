@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getReports, testPredictionEndpoints } from '../api/news';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Brain, TrendingUp, AlertTriangle, RefreshCw, Play, CheckCircle, XCircle, Clock, BarChart3, Zap, Target, Shield } from 'lucide-react';
 
 const NewsFeed = () => {
   const [reports, setReports] = useState({});
@@ -58,7 +60,6 @@ const NewsFeed = () => {
     }
   };
 
-
   const handleSelect = (e) => {
     setSelectedTicker(e.target.value);
   };
@@ -81,87 +82,164 @@ const NewsFeed = () => {
       alert('Test failed - check console');
     }
   };
+
   if (!analysisStarted) {
     return (
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>🧠 Run AI Stock Analysis</h2>
-        <p>Click below to begin multi-agent analysis for your followed stocks.</p>
-        <button 
-            onClick={fetchReports}
-            style={{
-            backgroundColor: '#4CAF50',
-            color: 'white',
-            padding: '12px 24px',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1.1em',
-            cursor: 'pointer'
-            }}
-        >
-            🚀 Run Analysis
-        </button>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 relative overflow-hidden">
+        {/* Animated background blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
         </div>
+
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-md"
+          >
+            <div className="backdrop-blur-md bg-white/5 rounded-2xl p-8 border border-white/10 shadow-2xl">
+              <motion.div
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="text-center mb-8"
+              >
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mb-4">
+                  <Brain className="w-8 h-8 text-white" />
+                </div>
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                  AI Stock Analysis
+                </h2>
+                <p className="text-gray-300 mt-2">
+                  Multi-agent intelligence powered by Gemini AI
+                </p>
+              </motion.div>
+
+              <motion.button
+                onClick={fetchReports}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+              >
+                <Play className="w-5 h-5" />
+                Run Analysis
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
     );
   }
 
-
   if (loading) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>🧠 AI Stock Analysis in Progress</h2>
-        <div style={{ 
-          width: '100%', 
-          backgroundColor: '#f0f0f0', 
-          borderRadius: '10px', 
-          marginBottom: '1rem' 
-        }}>
-          <div style={{
-            width: `${progress}%`,
-            height: '10px',
-            backgroundColor: '#4CAF50',
-            borderRadius: '10px',
-            transition: 'width 0.3s ease'
-          }}></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 relative overflow-hidden">
+        {/* Animated background blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
         </div>
-        <p>🔄 Our AI agents are analyzing market data, news sentiment, and technical indicators...</p>
-        <p style={{ color: '#666', fontSize: '0.9em' }}>This may take 1-2 minutes for comprehensive analysis</p>
+
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-md"
+          >
+            <div className="backdrop-blur-md bg-white/5 rounded-2xl p-8 border border-white/10 shadow-2xl">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mb-6 mx-auto"
+              >
+                <RefreshCw className="w-8 h-8 text-white" />
+              </motion.div>
+              
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent text-center mb-4">
+                AI Analysis in Progress
+              </h2>
+              
+              <div className="mb-6">
+                <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full"
+                  />
+                </div>
+                <p className="text-gray-300 text-sm text-center">{progress}% Complete</p>
+              </div>
+              
+              <p className="text-gray-300 text-center mb-2">
+                Our AI agents are analyzing market data, news sentiment, and technical indicators...
+              </p>
+              <p className="text-gray-400 text-sm text-center">
+                This may take 1-2 minutes for comprehensive analysis
+              </p>
+            </div>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>⚠️ Analysis Error</h2>
-        <p style={{ color: '#d32f2f', marginBottom: '1rem' }}>{error}</p>
-        <div>
-          <button 
-            onClick={retryFetch}
-            style={{
-              backgroundColor: '#1976d2',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              cursor: 'pointer',
-              marginRight: '10px'
-            }}
+      <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 relative overflow-hidden">
+        {/* Animated background blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-40 left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="w-full max-w-md"
           >
-            🔄 Retry Analysis
-          </button>
-          <button 
-            onClick={testEndpoints}
-            style={{
-              backgroundColor: '#ff9800',
-              color: 'white',
-              border: 'none',
-              padding: '10px 20px',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
-          >
-            🔧 Test System
-          </button>
+            <div className="backdrop-blur-md bg-white/5 rounded-2xl p-8 border border-white/10 shadow-2xl">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full mb-6 mx-auto">
+                <AlertTriangle className="w-8 h-8 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent text-center mb-4">
+                Analysis Error
+              </h2>
+              
+              <p className="text-red-300 text-center mb-6">{error}</p>
+              
+              <div className="space-y-3">
+                <motion.button
+                  onClick={retryFetch}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  Retry Analysis
+                </motion.button>
+                
+                <motion.button
+                  onClick={testEndpoints}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Zap className="w-5 h-5" />
+                  Test System
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -170,202 +248,221 @@ const NewsFeed = () => {
   const formatAnalysisKey = (key) => {
     return key.replace(/_/g, ' ')
              .replace(/\b\w/g, l => l.toUpperCase())
-             .replace('Analysis', 'Analysis 📊')
-             .replace('Strategy', 'Strategy 🎯')
-             .replace('Assessment', 'Assessment ⚠️');
+             .replace('Analysis', 'Analysis')
+             .replace('Strategy', 'Strategy')
+             .replace('Assessment', 'Assessment');
   };
 
   const getAnalysisIcon = (key) => {
     const icons = {
-      'market_analysis': '📈',
-      'fundamental_analysis': '💰',
-      'sentiment_analysis': '📰',
-      'risk_assessment': '⚠️',
-      'investment_strategy': '🎯',
-      'comprehensive_analysis': '🧠'
+      'market_analysis': TrendingUp,
+      'fundamental_analysis': BarChart3,
+      'sentiment_analysis': Brain,
+      'risk_assessment': Shield,
+      'investment_strategy': Target,
+      'comprehensive_analysis': Zap
     };
-    return icons[key] || '📋';
+    return icons[key] || BarChart3;
   };
 
   const getStatusColor = (status) => {
     const colors = {
-      'success': '#4CAF50',
-      'fallback': '#FF9800',
-      'error': '#F44336',
-      'timeout': '#9C27B0'
+      'success': 'from-green-500 to-emerald-500',
+      'fallback': 'from-yellow-500 to-orange-500',
+      'error': 'from-red-500 to-pink-500',
+      'timeout': 'from-purple-500 to-indigo-500'
     };
-    return colors[status] || '#757575';
+    return colors[status] || 'from-gray-500 to-gray-600';
+  };
+
+  const getStatusIcon = (status) => {
+    const icons = {
+      'success': CheckCircle,
+      'fallback': AlertTriangle,
+      'error': XCircle,
+      'timeout': Clock
+    };
+    return icons[status] || XCircle;
   };
 
   return (
-    <div style={{ padding: '1rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '2rem',
-        borderRadius: '15px',
-        marginBottom: '2rem',
-        textAlign: 'center'
-      }}>
-        <h1 style={{ margin: '0 0 1rem 0', fontSize: '2.5em' }}>🧠 AI Stock Intelligence</h1>
-        <p style={{ margin: 0, fontSize: '1.2em', opacity: 0.9 }}>
-          Multi-Agent Analysis • Powered by Gemini AI
-        </p>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 relative overflow-hidden">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-blue-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
       </div>
 
-      {summary && (
-        <div style={{
-          backgroundColor: '#f8f9fa',
-          padding: '1rem',
-          borderRadius: '10px',
-          marginBottom: '2rem',
-          border: '1px solid #e9ecef'
-        }}>
-          <h3>📊 Analysis Summary</h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-            <div><strong>Stocks Analyzed:</strong> {summary.total_tickers}</div>
-            <div><strong>Success Rate:</strong> {summary.success_rate}</div>
-            <div><strong>Model:</strong> {summary.model}</div>
-            <div><strong>Completed:</strong> {new Date(summary.timestamp).toLocaleString()}</div>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: '2rem' }}>
-        <label htmlFor="ticker-select" style={{ fontSize: '1.1em', fontWeight: 'bold' }}>
-          📈 Select Stock for Detailed Analysis:
-        </label>
-        <select
-          id="ticker-select"
-          onChange={handleSelect}
-          value={selectedTicker || ''}
-          style={{ 
-            marginLeft: '10px', 
-            padding: '8px 12px',
-            fontSize: '1em',
-            borderRadius: '5px',
-            border: '2px solid #ddd'
-          }}
+      <div className="relative z-10 p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="max-w-6xl mx-auto"
         >
-          {Object.keys(reports).map((ticker) => (
-            <option key={ticker} value={ticker}>
-              {ticker} - {reports[ticker]?.status === 'success' ? '✅' : 
-                        reports[ticker]?.status === 'fallback' ? '⚠️' : '❌'}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedTicker && (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '15px',
-          border: '1px solid #e9ecef',
-          overflow: 'hidden',
-          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-        }}>
-          <div style={{
-            background: `linear-gradient(135deg, ${getStatusColor(reports[selectedTicker]?.status)} 0%, ${getStatusColor(reports[selectedTicker]?.status)}dd 100%)`,
-            color: 'white',
-            padding: '1.5rem',
-            textAlign: 'center'
-          }}>
-            <h2 style={{ margin: '0 0 0.5rem 0' }}>
-              📈 {selectedTicker} Analysis Report
-            </h2>
-            <div style={{ 
-              backgroundColor: 'rgba(255,255,255,0.2)', 
-              display: 'inline-block', 
-              padding: '5px 15px', 
-              borderRadius: '20px',
-              fontSize: '0.9em'
-            }}>
-              Status: {reports[selectedTicker]?.status?.toUpperCase()}
+          {/* Header */}
+          <div className="backdrop-blur-md bg-white/5 rounded-2xl p-8 border border-white/10 shadow-2xl mb-8">
+            <div className="text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full mb-4">
+                <Brain className="w-8 h-8 text-white" />
+              </div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                AI Stock Intelligence
+              </h1>
+              <p className="text-gray-300 text-lg">
+                Multi-Agent Analysis • Powered by Gemini AI
+              </p>
             </div>
           </div>
 
-          <div style={{ padding: '2rem' }}>
-            {reports[selectedTicker]?.status === 'success' || reports[selectedTicker]?.status === 'fallback' ? (
-              <div>
-                {Object.entries(reports[selectedTicker].prediction || {}).map(([key, value]) => {
-                  // Skip metadata fields
-                  if (['ticker', 'timestamp', 'agents_used', 'analysis_type', 'model'].includes(key)) {
-                    return null;
-                  }
+          {/* Summary */}
+          {summary && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="backdrop-blur-md bg-white/5 rounded-2xl p-6 border border-white/10 shadow-2xl mb-8"
+            >
+              <h3 className="text-xl font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-4 flex items-center gap-2">
+                <BarChart3 className="w-6 h-6" />
+                Analysis Summary
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{summary.total_tickers}</div>
+                  <div className="text-gray-300 text-sm">Stocks Analyzed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{summary.success_rate}</div>
+                  <div className="text-gray-300 text-sm">Success Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{summary.model}</div>
+                  <div className="text-gray-300 text-sm">Model</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{new Date(summary.timestamp).toLocaleDateString()}</div>
+                  <div className="text-gray-300 text-sm">Completed</div>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
-                  return (
-                    <div key={key} style={{ 
-                      marginBottom: '2rem',
-                      padding: '1.5rem',
-                      backgroundColor: '#f8f9fa',
-                      borderRadius: '10px',
-                      borderLeft: '4px solid #667eea'
-                    }}>
-                      <h3 style={{ 
-                        color: '#333',
-                        marginBottom: '1rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
-                      }}>
-                        <span style={{ fontSize: '1.5em' }}>{getAnalysisIcon(key)}</span>
-                        {formatAnalysisKey(key)}
-                      </h3>
-                      <div style={{ 
-                        lineHeight: '1.6',
-                        color: '#444',
-                        whiteSpace: 'pre-wrap'
-                      }}>
-                        {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+          {/* Stock Selector */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="backdrop-blur-md bg-white/5 rounded-2xl p-6 border border-white/10 shadow-2xl mb-8"
+          >
+            <label htmlFor="ticker-select" className="block text-lg font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-4">
+              Select Stock for Detailed Analysis
+            </label>
+                         <select
+               id="ticker-select"
+               onChange={handleSelect}
+               value={selectedTicker || ''}
+               className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+             >
+               {Object.keys(reports).map((ticker) => (
+                 <option key={ticker} value={ticker} className="bg-gray-800 text-white">
+                   {ticker} - {reports[ticker]?.status === 'success' ? '✅' : 
+                             reports[ticker]?.status === 'fallback' ? '⚠️' : '❌'}
+                 </option>
+               ))}
+             </select>
+          </motion.div>
+
+          {/* Stock Analysis */}
+          {selectedTicker && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.6 }}
+              className="backdrop-blur-md bg-white/5 rounded-2xl border border-white/10 shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className={`bg-gradient-to-r ${getStatusColor(reports[selectedTicker]?.status)} p-6 text-center`}>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  {selectedTicker} Analysis Report
+                </h2>
+                <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md px-4 py-2 rounded-full text-sm font-medium">
+                  {(() => {
+                    const StatusIcon = getStatusIcon(reports[selectedTicker]?.status);
+                    return <StatusIcon className="w-4 h-4" />;
+                  })()}
+                  Status: {reports[selectedTicker]?.status?.toUpperCase()}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                {reports[selectedTicker]?.status === 'success' || reports[selectedTicker]?.status === 'fallback' ? (
+                  <div className="space-y-6">
+                    {Object.entries(reports[selectedTicker].prediction || {}).map(([key, value]) => {
+                      // Skip metadata fields
+                      if (['ticker', 'timestamp', 'agents_used', 'analysis_type', 'model'].includes(key)) {
+                        return null;
+                      }
+
+                      const IconComponent = getAnalysisIcon(key);
+
+                      return (
+                        <motion.div
+                          key={key}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.5 }}
+                          className="backdrop-blur-md bg-white/5 rounded-xl p-6 border border-white/10"
+                        >
+                          <h3 className="text-xl font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-4 flex items-center gap-3">
+                            <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
+                              <IconComponent className="w-5 h-5 text-white" />
+                            </div>
+                            {formatAnalysisKey(key)}
+                          </h3>
+                          <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
+                            {typeof value === 'string' ? value : JSON.stringify(value, null, 2)}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+
+                    {reports[selectedTicker].prediction?.timestamp && (
+                      <div className="text-center text-gray-400 text-sm pt-6 border-t border-white/10">
+                        Analysis completed: {new Date(reports[selectedTicker].prediction.timestamp).toLocaleString()}
                       </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-red-500 to-pink-500 rounded-full mb-4">
+                      <XCircle className="w-8 h-8 text-white" />
                     </div>
-                  );
-                })}
-
-                {reports[selectedTicker].prediction?.timestamp && (
-                  <div style={{ 
-                    textAlign: 'center',
-                    color: '#666',
-                    fontSize: '0.9em',
-                    marginTop: '2rem',
-                    paddingTop: '1rem',
-                    borderTop: '1px solid #eee'
-                  }}>
-                    🕒 Analysis completed: {new Date(reports[selectedTicker].prediction.timestamp).toLocaleString()}
+                    <h3 className="text-xl font-semibold text-white mb-2">Analysis Unavailable</h3>
+                    <p className="text-gray-300 mb-6">Report for {selectedTicker} could not be generated.</p>
+                    {reports[selectedTicker]?.error && (
+                      <p className="text-red-300 text-sm mb-6">
+                        {reports[selectedTicker].error}
+                      </p>
+                    )}
+                    <motion.button
+                      onClick={retryFetch}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      Retry Analysis
+                    </motion.button>
                   </div>
                 )}
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <div style={{ fontSize: '3em', marginBottom: '1rem' }}>
-                  {reports[selectedTicker]?.status === 'timeout' ? '⏱️' : '❌'}
-                </div>
-                <h3>Analysis Unavailable</h3>
-                <p>Report for {selectedTicker} could not be generated.</p>
-                {reports[selectedTicker]?.error && (
-                  <p style={{ color: '#d32f2f', fontSize: '0.9em' }}>
-                    {reports[selectedTicker].error}
-                  </p>
-                )}
-                <button 
-                  onClick={retryFetch}
-                  style={{
-                    backgroundColor: '#1976d2',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    marginTop: '1rem'
-                  }}
-                >
-                  🔄 Retry Analysis
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 };

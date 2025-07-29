@@ -11,7 +11,7 @@ from crewai import Agent, Task, Crew
 from app.tools.serper_tool import SerperSearchTool
 from dotenv import load_dotenv
 import asyncio
-from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 import time
 from datetime import datetime, timedelta
 import json
@@ -57,7 +57,7 @@ def create_stock_prediction_agents(llm, tools):
             llm=llm,
             tools=tools,
             verbose=False,
-            max_execution_time=180,  # Increased timeout for Gemini
+            max_execution_time=180,
             allow_delegation=False,
             memory=False,
             max_iter=3,
@@ -74,7 +74,7 @@ def create_stock_prediction_agents(llm, tools):
             llm=llm,
             tools=tools,
             verbose=False,
-            max_execution_time=180,  # Increased timeout for Gemini
+            max_execution_time=180,
             allow_delegation=False,
             memory=False,
             max_iter=3,
@@ -91,7 +91,7 @@ def create_stock_prediction_agents(llm, tools):
             llm=llm,
             tools=tools,
             verbose=False,
-            max_execution_time=180,  # Increased timeout for Gemini
+            max_execution_time=180,
             allow_delegation=False,
             memory=False,
             max_iter=3,
@@ -108,7 +108,7 @@ def create_stock_prediction_agents(llm, tools):
             llm=llm,
             tools=tools,
             verbose=False,
-            max_execution_time=180,  # Increased timeout for Gemini
+            max_execution_time=180,
             allow_delegation=False,
             memory=False,
             max_iter=3,
@@ -125,7 +125,7 @@ def create_stock_prediction_agents(llm, tools):
             llm=llm,
             tools=[],  # No search tools - focuses on synthesis
             verbose=False,
-            max_execution_time=180,  # Increased timeout for Gemini
+            max_execution_time=180,
             allow_delegation=False,
             memory=False,
             max_iter=2,
@@ -257,7 +257,7 @@ def create_prediction_tasks(ticker: str, agents: Dict) -> List[Task]:
         raise
 
 def execute_stock_prediction(ticker: str, llm, tools, timeout_seconds: int = 400) -> Dict[str, Any]:
-    """Execute comprehensive multi-agent stock prediction using Gemini"""
+    """Execute comprehensive multi-agent stock prediction using Gemini - SAME AS ORIGINAL"""
     def run_prediction_analysis():
         try:
             logger.info(f"=== Starting Gemini multi-agent prediction for {ticker} ===")
@@ -411,6 +411,50 @@ def execute_stock_prediction(ticker: str, llm, tools, timeout_seconds: int = 400
             "error": str(e)
         }
 
+def execute_parallel_stock_analysis(tickers: List[str], llm, tools, max_workers: int = 3) -> Dict[str, Any]:
+    """Execute the SAME comprehensive multi-agent analysis for multiple tickers in parallel"""
+    logger.info(f"Starting parallel execution of full analysis for {len(tickers)} tickers with {max_workers} workers")
+    
+    results = {}
+    start_time = time.time()
+    
+    # Use ThreadPoolExecutor for parallel execution
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all ticker analyses to run in parallel
+        future_to_ticker = {
+            executor.submit(execute_stock_prediction, ticker, llm, tools, 400): ticker 
+            for ticker in tickers
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_ticker, timeout=600):  # 10 minute overall timeout
+            ticker = future_to_ticker[future]
+            try:
+                result = future.result()
+                results[ticker] = result
+                logger.info(f"✓ Completed full analysis for {ticker}")
+            except Exception as e:
+                logger.error(f"✗ Failed full analysis for {ticker}: {e}")
+                results[ticker] = {
+                    "status": "error",
+                    "prediction": {
+                        "ticker": ticker,
+                        "error": f"Parallel execution error: {str(e)}",
+                        "timestamp": datetime.now().isoformat(),
+                        "analysis_type": "gemini_multi_agent_prediction",
+                        "model": "gemini-2.0-flash"
+                    },
+                    "ticker": ticker,
+                    "error": str(e)
+                }
+    
+    end_time = time.time()
+    total_time = end_time - start_time
+    
+    logger.info(f"Parallel execution of full analysis completed in {total_time:.2f} seconds")
+    
+    return results
+
 def test_llm_thoroughly(llm):
     """Test the Gemini LLM with various inputs to ensure it works for predictions"""
     try:
@@ -433,9 +477,9 @@ def test_llm_thoroughly(llm):
 
 @router.get("/custom-summary")
 def generate_reports(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Generate comprehensive AI-powered stock prediction reports using Gemini multi-agent system"""
+    """Generate comprehensive AI-powered stock prediction reports using Gemini multi-agent system WITH PARALLEL EXECUTION"""
     try:
-        logger.info(f"=== Starting GEMINI MULTI-AGENT stock prediction for user {current_user.id} ===")
+        logger.info(f"=== Starting PARALLEL GEMINI MULTI-AGENT stock prediction for user {current_user.id} ===")
         
         # Validate environment for Gemini
         google_api_key, serper_api_key = validate_environment()
@@ -446,10 +490,10 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
             tickers = ["AAPL", "MSFT"]  # Default to major stocks for demo
             logger.info("No followed stocks found, using AAPL and MSFT as defaults")
         else:
-            # Limit to prevent overwhelming analysis
-            tickers = tickers[:3]  # Process up to 3 tickers for comprehensive analysis
+            # Limit to prevent overwhelming analysis - you can increase this since it's parallel now
+            tickers = tickers[:3]  # Process up to 3 tickers in parallel
             
-        logger.info(f"Processing tickers for Gemini multi-agent prediction: {tickers}")
+        logger.info(f"Processing tickers for parallel Gemini multi-agent prediction: {tickers}")
         
         # Initialize Gemini LLM with prediction testing
         llm = None
@@ -462,7 +506,7 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
                     model="gemini-2.0-flash", 
                     temperature=0.1,  # Slight temperature for diverse analysis
                     google_api_key=google_api_key,
-                    max_tokens=600  # Increased for comprehensive analysis
+                    max_tokens=600  # Same as original
                 )
                 
                 # Test Gemini LLM for prediction capabilities
@@ -479,7 +523,7 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
                         status_code=500, 
                         detail=f"Failed to initialize Gemini prediction AI model after {max_llm_retries} attempts"
                     )
-                time.sleep(5)  # Longer wait for prediction setup
+                time.sleep(5)
         
         # Initialize search tools for market data
         tools = []
@@ -490,42 +534,25 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
         except Exception as e:
             logger.warning(f"Search tool failed, Gemini predictions will use general knowledge: {e}")
         
-        # Process each ticker with Gemini multi-agent prediction system
-        prediction_reports = {}
-        successful_predictions = 0
+        # *** PARALLEL EXECUTION INSTEAD OF SEQUENTIAL ***
+        start_time = time.time()
         
-        for i, ticker in enumerate(tickers):
-            try:
-                logger.info(f"Processing Gemini prediction {i+1}/{len(tickers)}: {ticker}")
-                
-                # Execute comprehensive Gemini multi-agent prediction
-                result = execute_stock_prediction(ticker, llm, tools, timeout_seconds=400)
-                
-                prediction_reports[ticker] = result
-                
-                if result["status"] in ["success", "fallback"]:
-                    successful_predictions += 1
-                    logger.info(f"✓ {ticker} Gemini prediction completed")
-                else:
-                    logger.warning(f"✗ {ticker} Gemini prediction had issues")
-                
-                # Longer pause between comprehensive predictions for Gemini rate limits
-                if i < len(tickers) - 1:
-                    time.sleep(10)  # Increased delay for Gemini
-                    
-            except Exception as e:
-                logger.error(f"Exception during {ticker} Gemini prediction: {e}")
-                prediction_reports[ticker] = {
-                    "status": "error",
-                    "prediction": {
-                        "ticker": ticker,
-                        "error": "Unexpected error during Gemini multi-agent prediction",
-                        "timestamp": datetime.now().isoformat(),
-                        "model": "gemini-2.0-flash"
-                    },
-                    "ticker": ticker,
-                    "error": str(e)
-                }
+        # Execute all tickers in parallel using the SAME comprehensive analysis
+        prediction_reports = execute_parallel_stock_analysis(
+            tickers, 
+            llm, 
+            tools, 
+            max_workers=min(3, len(tickers))  # Use up to 3 workers, limited by number of tickers
+        )
+        
+        end_time = time.time()
+        total_time = end_time - start_time
+        
+        # Count successful predictions
+        successful_predictions = sum(
+            1 for result in prediction_reports.values() 
+            if result.get("status") in ["success", "fallback"]
+        )
         
         # Compile comprehensive response
         response = {
@@ -534,23 +561,26 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
                 "total_tickers": len(tickers),
                 "successful_predictions": successful_predictions,
                 "success_rate": f"{(successful_predictions/len(tickers)*100):.1f}%" if tickers else "0%",
-                "analysis_type": "gemini_multi_agent_prediction",
+                "analysis_type": "parallel_gemini_multi_agent_prediction",
                 "model": "gemini-2.0-flash",
+                "execution_time_seconds": round(total_time, 2),
+                "average_time_per_ticker": round(total_time / len(tickers), 2) if tickers else 0,
+                "parallel_workers_used": min(3, len(tickers)),
                 "timestamp": datetime.now().isoformat()
             },
             "status": "completed",
-            "message": f"Gemini multi-agent stock prediction completed: {successful_predictions}/{len(tickers)} successful predictions"
+            "message": f"Parallel Gemini multi-agent prediction completed in {total_time:.1f}s: {successful_predictions}/{len(tickers)} successful predictions"
         }
         
-        logger.info(f"=== GEMINI MULTI-AGENT prediction completed: {successful_predictions}/{len(tickers)} ===")
+        logger.info(f"=== PARALLEL GEMINI MULTI-AGENT prediction completed in {total_time:.2f}s: {successful_predictions}/{len(tickers)} ===")
         return response
         
     except HTTPException:
         raise  # Re-raise HTTP exceptions
         
     except Exception as e:
-        logger.error(f"Critical error in Gemini multi-agent predictions: {e}")
-        logger.error(f"Critical Gemini prediction traceback: {traceback.format_exc()}")
+        logger.error(f"Critical error in parallel Gemini multi-agent predictions: {e}")
+        logger.error(f"Critical parallel Gemini prediction traceback: {traceback.format_exc()}")
         
         # Return error response with helpful information
         return {
@@ -559,12 +589,13 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
                 "total_tickers": 0,
                 "successful_predictions": 0,
                 "success_rate": "0%",
-                "analysis_type": "gemini_multi_agent_prediction",
+                "analysis_type": "parallel_gemini_multi_agent_prediction",
                 "model": "gemini-2.0-flash",
+                "execution_time_seconds": 0,
                 "timestamp": datetime.now().isoformat()
             },
             "status": "critical_error",
-            "message": f"Gemini multi-agent prediction system encountered critical error: {str(e)}"
+            "message": f"Parallel Gemini multi-agent prediction system encountered critical error: {str(e)}"
         }
 
 @router.get("/test-wrapper")

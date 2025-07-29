@@ -7,7 +7,6 @@ import AudioUploader from './AudioUploader';
 export default function Sidebar() {
   const [activeTab, setActiveTab] = useState(0);
 
-  // Memoize components to prevent unnecessary re-renders
   const components = useMemo(() => [
     <MarketDataTable />,
     <NewsFeed />,
@@ -45,7 +44,6 @@ export default function Sidebar() {
 
       {/* Main Content */}
       <main className="flex-1 p-8 overflow-y-auto">
-        {/* Render all components but only show the active one */}
         {components.map((component, index) => (
           <div
             key={index}
