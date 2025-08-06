@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import os
 import debugpy
 from app.db import Base, engine
-from app.routes import market_data, news, sentiment, audio, live_market, auth, user_stocks
+from app.routes import market_data, news, sentiment, audio, live_market, auth, user_stocks, ai_assistant
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -27,6 +27,7 @@ app.include_router(audio.router, prefix="/audio", tags=["Audio"])
 app.include_router(live_market.router)
 app.include_router(auth.router)
 app.include_router(user_stocks.router)
+app.include_router(ai_assistant.router)
 
 # Root Endpoint
 @app.get("/")

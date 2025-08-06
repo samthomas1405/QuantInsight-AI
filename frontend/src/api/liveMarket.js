@@ -66,3 +66,17 @@ export const fetchStockHistory = async (symbol) => {
     throw error;
   }
 };
+
+// 🔍 Test Finnhub connection
+export const testFinnhubConnection = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/test`, {
+      timeout: 10000, // 10 second timeout
+    });
+    console.log('Finnhub test response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Finnhub test error:', error);
+    throw error;
+  }
+};

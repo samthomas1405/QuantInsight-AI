@@ -4,7 +4,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { motion } from 'framer-motion';
-import { LogIn, Eye, EyeOff, Sparkles, Brain } from 'lucide-react';
+import { LogIn, Eye, EyeOff, TrendingUp, Activity } from 'lucide-react';
+import QuantInsightLogo, { QuantInsightLogoMark } from './QuantInsightLogo';
 import { loginUser, fetchUserInfo } from '../api/auth';
 import { useNavigate } from 'react-router-dom';
 
@@ -39,136 +40,250 @@ export default function LoginPage({ setToken }) {
     }
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, duration: 0.6 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
-    },
-  };
-
   return (
-    <div className="min-h-screen relative flex items-center justify-center bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] p-4 overflow-hidden">
-      {/* Glowing blobs */}
-      <div className="absolute top-20 left-20 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl animate-pulse" />
-      <div className="absolute bottom-20 right-20 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl animate-ping" style={{ animationDelay: '2s' }} />
-      <div className="absolute top-1/2 left-10 w-24 h-24 bg-blue-500/20 rounded-full blur-2xl animate-float" style={{ animationDelay: '4s' }} />
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-indigo-700 p-12 flex-col justify-between relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute -top-24 -left-24 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10">
+          <div className="mb-16">
+            <QuantInsightLogo size="large" className="filter brightness-0 invert" animate={false} />
+          </div>
+          
+          <div className="space-y-6">
+            <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+              AI-Powered Trading Intelligence
+            </h2>
+            <p className="text-xl text-blue-100 leading-relaxed">
+              Make smarter investment decisions with real-time market analysis and predictive insights powered by artificial intelligence.
+            </p>
+          </div>
+        </div>
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 w-full max-w-md"
-      >
-        <motion.div variants={itemVariants}>
-          <Card className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-md shadow-xl border border-white/10">
-            <CardContent className="relative p-8 space-y-6">
-              <motion.div variants={itemVariants} className="text-center space-y-2">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                    <Brain className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-                <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 text-transparent bg-clip-text">
-                  QuantInsight AI
-                </h1>
-                <p className="text-slate-300">
-                  Welcome back! Sign in to continue your journey.
-                </p>
-              </motion.div>
+        {/* Animated Chart Graphic */}
+        <div className="relative z-10 mt-12">
+          <svg viewBox="0 0 400 200" className="w-full max-w-md mx-auto">
+            {/* Grid Lines */}
+            <g className="opacity-20">
+              {[0, 1, 2, 3, 4].map(i => (
+                <line
+                  key={`h-${i}`}
+                  x1="0"
+                  y1={i * 40}
+                  x2="400"
+                  y2={i * 40}
+                  stroke="white"
+                  strokeWidth="1"
+                />
+              ))}
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                <line
+                  key={`v-${i}`}
+                  x1={i * 50}
+                  y1="0"
+                  x2={i * 50}
+                  y2="160"
+                  stroke="white"
+                  strokeWidth="1"
+                />
+              ))}
+            </g>
+            
+            {/* Animated Line Chart */}
+            <motion.path
+              d="M 0 120 Q 50 100 100 90 T 200 70 Q 250 50 300 40 T 400 20"
+              fill="none"
+              stroke="white"
+              strokeWidth="3"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+            />
+            
+            {/* Gradient Fill */}
+            <defs>
+              <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="white" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="white" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            
+            <motion.path
+              d="M 0 120 Q 50 100 100 90 T 200 70 Q 250 50 300 40 T 400 20 L 400 160 L 0 160 Z"
+              fill="url(#gradient)"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5, duration: 1 }}
+            />
+            
+            {/* Data Points */}
+            {[
+              { x: 0, y: 120 },
+              { x: 100, y: 90 },
+              { x: 200, y: 70 },
+              { x: 300, y: 40 },
+              { x: 400, y: 20 }
+            ].map((point, index) => (
+              <motion.circle
+                key={index}
+                cx={point.x}
+                cy={point.y}
+                r="5"
+                fill="white"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3 + index * 0.1 }}
+              />
+            ))}
+          </svg>
+        </div>
 
-              <motion.form variants={itemVariants} onSubmit={handleLogin} className="space-y-4">
-                <motion.div variants={itemVariants} className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+        {/* Features */}
+        <div className="relative z-10 grid grid-cols-3 gap-6 mt-16">
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-lg flex items-center justify-center mx-auto mb-2">
+              <TrendingUp className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-sm text-blue-100">Real-time Analysis</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-lg flex items-center justify-center mx-auto mb-2">
+              <QuantInsightLogoMark size={24} className="filter brightness-0 invert" />
+            </div>
+            <p className="text-sm text-blue-100">AI Predictions</p>
+          </div>
+          <div className="text-center">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-lg flex items-center justify-center mx-auto mb-2">
+              <Activity className="w-6 h-6 text-white" />
+            </div>
+            <p className="text-sm text-blue-100">Live Market Data</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          {/* Mobile Logo */}
+          <div className="lg:hidden mb-8 text-center">
+            <QuantInsightLogo size="default" className="mx-auto" />
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
+              <p className="text-gray-600 mt-2">Please enter your details to sign in</p>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <Label htmlFor="email" className="text-gray-700 font-medium">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password" className="text-gray-700 font-medium">
+                  Password
+                </Label>
+                <div className="relative mt-1">
                   <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="h-12 rounded-xl bg-white/10 border border-white/20 placeholder:text-slate-400 text-white"
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="block w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     required
                   />
-                </motion.div>
-
-                <motion.div variants={itemVariants} className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      className="h-12 rounded-xl bg-white/10 border border-white/20 pr-12 placeholder:text-slate-400 text-white"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </motion.div>
-
-                {error && (
-                  <motion.p className="text-red-500 text-sm text-center bg-red-500/10 border border-red-500/30 p-2 rounded-lg">
-                    {error}
-                  </motion.p>
-                )}
-
-                <motion.div variants={itemVariants}>
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base font-semibold rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white"
-                    disabled={loading}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                   >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Signing in...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <LogIn className="w-4 h-4" /> Sign In
-                      </div>
-                    )}
-                  </Button>
-                </motion.div>
-
-                <div className="text-xs text-slate-400 text-center bg-white/5 border border-white/10 p-3 rounded-lg">
-                  <p className="font-medium mb-1">Demo Credentials:</p>
-                  <p>Email: demo@example.com</p>
-                  <p>Password: password</p>
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
-              </motion.form>
+              </div>
 
-              <div className="text-center pt-4 border-t border-white/10">
-                <p className="text-sm text-slate-400">
-                  Don’t have an account?{' '}
-                  <a
-                    href="/register"
-                    className="text-blue-400 hover:text-blue-300 underline transition-colors"
-                  >
-                    Create one here
-                  </a>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileHover={{ scale: loading ? 1 : 1.02 }}
+                whileTap={{ scale: loading ? 1 : 0.98 }}
+                className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Signing In...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="w-5 h-5" />
+                    <span>Sign In</span>
+                  </>
+                )}
+              </motion.button>
+
+              {/* Demo Credentials */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-medium text-blue-900 mb-1">
+                  Demo Credentials
+                </p>
+                <p className="text-xs text-blue-700">
+                  Email: demo@example.com<br />
+                  Password: password
                 </p>
               </div>
-            </CardContent>
-          </Card>
+            </form>
+
+            {/* Register Link */}
+            <div className="text-center">
+              <p className="text-gray-600 text-sm">
+                Don't have an account?{' '}
+                <a
+                  href="/register"
+                  className="text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                >
+                  Create Account
+                </a>
+              </p>
+            </div>
+          </div>
         </motion.div>
-      </motion.div>
+      </div>
     </div>
   );
 }

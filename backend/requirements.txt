@@ -5,6 +5,10 @@ charset-normalizer==3.4.2
 click==8.2.1
 fastapi==0.115.12
 filelock==3.18.0
+finnhub-python==2.4.18
+yfinance==0.2.36
+google-generativeai==0.8.3
+httpx==0.27.0
 fsspec==2025.5.1
 h11==0.16.0
 hf-xet==1.1.2
@@ -37,3 +41,13 @@ typing-inspection==0.4.1
 typing_extensions==4.13.2
 urllib3==2.4.0
 uvicorn==0.34.2
+python-dateutil==2.9.0
+beautifulsoup4==4.12.3
+lxml==5.1.0
+crewai==0.36.0
+newsapi-python==0.2.7
+polygon-api-client==1.13.6
+bcrypt==4.2.3
+passlib==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.17

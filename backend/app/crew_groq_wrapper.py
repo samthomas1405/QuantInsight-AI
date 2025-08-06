@@ -23,7 +23,7 @@ class CrewCompatibleGemini(LLM):
         max_tokens: int = 1000,
         top_p: float = 0.9,
         top_k: int = 40,
-        **kwargs
+            **kwargs
     ):
         """Initialize Gemini API client directly (not through Vertex AI)"""
         
@@ -103,7 +103,7 @@ class CrewCompatibleGemini(LLM):
                 neutral_prompt = f"Provide an educational analysis of the following market information: {neutral_prompt}"
             
             return neutral_prompt
-            
+                
         except Exception as e:
             logger.error(f"Error neutralizing prompt: {e}")
             return prompt
@@ -199,7 +199,7 @@ class CrewCompatibleGemini(LLM):
                 
                 logger.warning("Gemini returned empty response after all attempts")
                 return "I'll provide a general analysis based on available information. For specific financial data, please consult current market sources."
-                
+            
         except Exception as e:
             logger.error(f"Error calling Gemini API: {e}")
             

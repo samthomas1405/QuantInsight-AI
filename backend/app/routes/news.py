@@ -9,6 +9,7 @@ import logging
 import traceback
 from crewai import Agent, Task, Crew
 from app.tools.serper_tool import SerperSearchTool
+from app.utils.yahoo_finance_news import fetch_yahoo_finance_news, fetch_market_news
 from dotenv import load_dotenv
 import asyncio
 from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
@@ -16,6 +17,10 @@ import time
 from datetime import datetime, timedelta
 import json
 from typing import Dict, List, Any, Optional
+try:
+    from dateutil import parser as date_parser
+except ImportError:
+    date_parser = None
 
 # Import the improved Gemini wrapper instead of Groq
 from app.crew_groq_wrapper import CrewCompatibleGemini, test_crew_gemini_with_detailed_logging
@@ -706,3 +711,101 @@ def minimal_test():
             "traceback": traceback.format_exc()[:500],
             "model": "gemini-2.0-flash"
         }
+
+@router.get("/stocks/{symbols}")
+def get_news_for_stocks(symbols: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get news for specific stock symbols using Yahoo Finance"""
+    try:
+        # Parse symbols (comma-separated)
+        symbol_list = [s.strip().upper() for s in symbols.split(',') if s.strip()]
+        
+        if not symbol_list:
+            return {"data": [], "message": "No symbols provided"}
+        
+        # Fetch news for each symbol using Yahoo Finance
+        all_news = []
+        for symbol in symbol_list:  # Can handle more symbols with Yahoo Finance
+            try:
+                # Fetch news from Yahoo Finance
+                yahoo_news = fetch_yahoo_finance_news(symbol)
+                
+                if yahoo_news:
+                    all_news.extend(yahoo_news)
+                else:
+                    # Fallback if no news found
+                    all_news.append({
+                        "title": f"Latest {symbol} Stock News",
+                        "snippet": f"Check Yahoo Finance for the latest {symbol} news and updates",
+                        "url": f"https://finance.yahoo.com/quote/{symbol}",
+                        "source": "Yahoo Finance",
+                        "timestamp": datetime.now().isoformat(),
+                        "symbol": symbol
+                    })
+                    
+            except Exception as e:
+                logger.error(f"Error fetching news for {symbol}: {e}")
+                continue
+        
+        return {
+            "data": all_news,
+            "message": f"Found news for {len(all_news)} stocks"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_news_for_stocks: {e}")
+        return {"data": [], "message": "Error fetching news"}
+
+@router.get("/stock/{symbol}")
+def get_stock_news(symbol: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get news for a specific stock symbol using Yahoo Finance"""
+    try:
+        symbol = symbol.upper()
+        
+        # Fetch news from Yahoo Finance
+        news_data = fetch_yahoo_finance_news(symbol)
+        
+        # Fallback if no news found
+        if not news_data:
+            news_data = [{
+                "title": f"Latest {symbol} Stock News",
+                "snippet": f"Check Yahoo Finance for the latest {symbol} news and updates",
+                "url": f"https://finance.yahoo.com/quote/{symbol}",
+                "source": "Yahoo Finance",
+                "timestamp": datetime.now().isoformat(),
+                "symbol": symbol
+            }]
+        
+        return {
+            "data": news_data,
+            "message": f"Found news for {symbol}"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_stock_news: {e}")
+        return {"data": [], "message": "Error fetching news"}
+
+@router.get("/market")
+def get_market_news(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get general market news from major indices"""
+    try:
+        # Fetch market news from Yahoo Finance
+        news_data = fetch_market_news()
+        
+        # Fallback if no news found
+        if not news_data:
+            news_data = [{
+                "title": "Market Update",
+                "snippet": "Check Yahoo Finance for the latest market news and updates",
+                "url": "https://finance.yahoo.com",
+                "source": "Yahoo Finance",
+                "timestamp": datetime.now().isoformat()
+            }]
+        
+        return {
+            "data": news_data,
+            "message": "Found market news"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in get_market_news: {e}")
+        return {"data": [], "message": "Error fetching market news"}

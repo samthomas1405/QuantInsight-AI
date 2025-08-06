@@ -1,5 +1,55 @@
 import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:8000';
+
+// Create axios instance with token interceptor
+const api = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Add token to requests
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Fetch news for specific stock symbols
+export const fetchNewsForStocks = async (symbols) => {
+  try {
+    const response = await api.get(`/news/stocks/${symbols}`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching news for stocks:', error);
+    throw error;
+  }
+};
+
+// Fetch general market news
+export const fetchMarketNews = async () => {
+  try {
+    const response = await api.get('/news/market');
+    return response;
+  } catch (error) {
+    console.error('Error fetching market news:', error);
+    throw error;
+  }
+};
+
+// Fetch news for a specific stock
+export const fetchStockNews = async (symbol) => {
+  try {
+    const response = await api.get(`/news/stock/${symbol}`);
+    return response;
+  } catch (error) {
+    console.error('Error fetching stock news:', error);
+    throw error;
+  }
+};
+
+// Original functions for NewsFeed.jsx compatibility
 const API_URL = 'http://127.0.0.1:8000/news/custom-summary';
 
 export const getReports = async (userToken) => {
