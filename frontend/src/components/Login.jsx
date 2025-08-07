@@ -1,6 +1,4 @@
-import React, { useState } from 'react';
-import { Card, CardContent } from './ui/card';
-import { Button } from './ui/button';
+import { useState } from 'react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { motion } from 'framer-motion';
@@ -56,7 +54,7 @@ export default function LoginPage({ setToken }) {
             <QuantInsightLogo size="large" className="filter brightness-0 invert" animate={false} />
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4">
             <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
               AI-Powered Trading Intelligence
             </h2>
@@ -168,7 +166,7 @@ export default function LoginPage({ setToken }) {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -180,16 +178,16 @@ export default function LoginPage({ setToken }) {
             <QuantInsightLogo size="default" className="mx-auto" />
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-gray-200/50">
             <div>
               <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
               <p className="text-gray-600 mt-2">Please enter your details to sign in</p>
             </div>
 
             {/* Login Form */}
-            <form onSubmit={handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div>
-                <Label htmlFor="email" className="text-gray-700 font-medium">
+                <Label htmlFor="email" className="text-gray-700 font-medium text-sm">
                   Email Address
                 </Label>
                 <Input
@@ -198,13 +196,13 @@ export default function LoginPage({ setToken }) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
-                  className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="mt-1 block w-full px-3 py-2 bg-gray-50/50 backdrop-blur border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:bg-white/50"
                   required
                 />
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-gray-700 font-medium">
+                <Label htmlFor="password" className="text-gray-700 font-medium text-sm">
                   Password
                 </Label>
                 <div className="relative mt-1">
@@ -214,7 +212,7 @@ export default function LoginPage({ setToken }) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="block w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="block w-full px-3 py-2 pr-12 bg-gray-50/50 backdrop-blur border border-gray-200/50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all hover:bg-white/50"
                     required
                   />
                   <button
@@ -231,7 +229,7 @@ export default function LoginPage({ setToken }) {
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm"
+                  className="bg-red-50/80 backdrop-blur border border-red-200/50 text-red-700 px-4 py-3 rounded-lg text-sm shadow-sm"
                 >
                   {error}
                 </motion.div>
@@ -242,7 +240,7 @@ export default function LoginPage({ setToken }) {
                 disabled={loading}
                 whileHover={{ scale: loading ? 1 : 1.02 }}
                 whileTap={{ scale: loading ? 1 : 0.98 }}
-                className="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
               >
                 {loading ? (
                   <>
@@ -258,7 +256,7 @@ export default function LoginPage({ setToken }) {
               </motion.button>
 
               {/* Demo Credentials */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-gradient-to-r from-blue-50/80 to-indigo-50/80 backdrop-blur border border-blue-200/50 rounded-lg p-4 shadow-sm">
                 <p className="text-sm font-medium text-blue-900 mb-1">
                   Demo Credentials
                 </p>

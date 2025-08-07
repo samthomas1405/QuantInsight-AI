@@ -3,6 +3,8 @@
 @tailwind utilities;
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   /* Modern Light Theme Colors */
@@ -87,10 +89,100 @@ html {
 
 body {
   margin: 0;
-  background-color: var(--bg-secondary);
+  background-color: #fafbfc;
   color: var(--text-primary);
   overflow-x: hidden;
   line-height: 1.5;
+}
+
+body.dark {
+  background-color: #0f0f0f;
+  color: #ffffff;
+}
+
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+body.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #4a5568;
+}
+
+body.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* Production-ready app background */
+.app-background {
+  background: linear-gradient(135deg, #fafbfc 0%, #f8f9fb 100%);
+  min-height: 100vh;
+}
+
+.app-background.dark {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+}
+
+/* Sidebar background */
+.sidebar-background {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.sidebar-background.dark {
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Content area styling */
+.content-area {
+  background: transparent;
+  padding: 0;
+}
+
+/* Section headers with bottom border */
+.section-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 12px;
+  margin-bottom: 24px;
+}
+
+.section-header.dark {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Flat design for data rows */
+.data-row {
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: background-color 0.2s ease;
+}
+
+.data-row:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.data-row.dark {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.data-row.dark:hover {
+  background-color: rgba(255, 255, 255, 0.04);
 }
 
 /* Typography */
@@ -367,18 +459,118 @@ body {
   opacity: 1;
 }
 
-/* Remove all animated backgrounds and excessive effects */
-.animate-float,
-.animate-pulse-neon,
-.hover-glow,
-.glow-neon,
-.card-neon {
-  animation: none !important;
+/* Micro-interactions */
+.interactive-scale {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.interactive-scale:hover {
+  transform: scale(1.02);
+}
+
+.interactive-scale:active {
+  transform: scale(0.98);
+}
+
+/* Price movement animations */
+@keyframes price-increase {
+  0% { background-color: rgba(16, 185, 129, 0.1); }
+  100% { background-color: transparent; }
+}
+
+@keyframes price-decrease {
+  0% { background-color: rgba(239, 68, 68, 0.1); }
+  100% { background-color: transparent; }
+}
+
+.price-animate-up {
+  animation: price-increase 2s ease-out;
+}
+
+.price-animate-down {
+  animation: price-decrease 2s ease-out;
+}
+
+/* Skeleton loader */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton.dark {
+  background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+  background-size: 200% 100%;
+}
+
+/* Interactive elements */
+.btn-modern {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-modern:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-modern:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Sparkline container */
+.sparkline {
+  width: 60px;
+  height: 20px;
+  display: inline-block;
+}
+
+/* Theme toggle */
+.theme-toggle {
+  background: #e5e7eb;
+  border-radius: 50px;
+  padding: 2px;
+  width: 52px;
+  height: 28px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.theme-toggle.dark {
+  background: #374151;
+}
+
+.theme-toggle-thumb {
+  width: 24px;
+  height: 24px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-toggle.dark .theme-toggle-thumb {
+  transform: translateX(24px);
+  background: #1f2937;
 }
 
 /* Clean, professional shadows only */
 .shadow-soft {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .shadow-hover {
@@ -386,5 +578,5 @@ body {
 }
 
 .shadow-hover:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
