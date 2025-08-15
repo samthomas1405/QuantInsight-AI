@@ -42,12 +42,12 @@ function App() {
           {/* Protected Routes - Only accessible when authenticated */}
           {isAuthenticated ? (
             <>
-              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/select-stocks" element={<StockSelection />} />
             </>
           ) : (
             <>
-              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/dashboard/*" element={<Navigate to="/" replace />} />
               <Route path="/select-stocks" element={<Navigate to="/" replace />} />
             </>
           )}

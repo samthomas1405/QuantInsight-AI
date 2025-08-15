@@ -3,7 +3,6 @@ import { fetchLiveFollowedMarketData } from '../api/liveMarket';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, TrendingDown, RefreshCw, AlertCircle, Zap, Clock, X } from 'lucide-react';
 import StockChart from './StockChart';
-import Sparkline from './Sparkline';
 import CompanyLogo from './CompanyLogo';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -43,14 +42,19 @@ const MarketDataTable = () => {
     loadMarketData();
   }, [fetchEnabled]);
 
-  const stocks = Array.isArray(data) ? data : Object.entries(data).map(([symbol, value]) => ({
+  const stocks = Array.isArray(data) ? data : Object.entries(data).map(([symbol, stockData]) => ({
     symbol,
-    price: parseFloat(value.price),
-    timestamp: new Date().toISOString(),
-    change: Math.random() > 0.5 ? '+' : '-',
-    changePercent: (Math.random() * 5).toFixed(2),
-    volume: Math.floor(Math.random() * 10000000),
-    sparklineData: Array.from({ length: 20 }, () => Math.random() * 100 + 50),
+    price: stockData.price,
+    timestamp: stockData.last_updated || new Date().toISOString(),
+    change: stockData.change >= 0 ? '+' : '-',
+    changePercent: Math.abs(stockData.percent_change),
+    changeValue: stockData.change,
+    volume: stockData.volume,
+    high: stockData.high,
+    low: stockData.low,
+    open: stockData.open,
+    name: stockData.name || symbol,
+    marketCap: stockData.market_cap
   }));
 
   const handleRetry = () => {
@@ -205,7 +209,7 @@ const MarketDataTable = () => {
                         <div className={`flex items-center gap-1 mt-1 text-sm font-semibold ${
                           isPositive ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-red-400' : 'text-red-600')
                         }`}>
-                          {isPositive ? '↑' : '↓'} {stock.changePercent}%
+                          {isPositive ? '↑' : '↓'} ${Math.abs(stock.changeValue).toFixed(2)} ({stock.changePercent.toFixed(2)}%)
                         </div>
                       </div>
                       
@@ -285,8 +289,7 @@ const MarketDataTable = () => {
                                     {stock.symbol}
                                   </span>
                                   <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} font-medium`}>
-                                    {/* You can add company name here if available in your data */}
-                                    Stock Symbol
+                                    {stock.name}
                                   </div>
                                 </div>
                               </div>
@@ -301,7 +304,7 @@ const MarketDataTable = () => {
                                 isPositive ? (isDark ? 'text-emerald-400' : 'text-emerald-600') : (isDark ? 'text-red-400' : 'text-red-600')
                               }`}>
                                 {isPositive ? '↑' : '↓'}
-                                <span className="font-semibold">{stock.changePercent}%</span>
+                                <span className="font-semibold">${Math.abs(stock.changeValue).toFixed(2)} ({stock.changePercent.toFixed(2)}%)</span>
                               </div>
                             </td>
                             <td className="px-6 py-4">

@@ -26,22 +26,30 @@ const StockChart = ({ symbol }) => {
     setLoading(true);
     fetchStockHistory(symbol)
       .then((data) => {
-        const sorted = [...data].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        setHistory(sorted);
-        if (sorted.length > 0) {
+        if (data && data.length > 0) {
+          const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
+          setHistory(sorted);
+          
           const start = sorted[0].price;
           const end = sorted[sorted.length - 1].price;
+          const high = Math.max(...sorted.map(d => d.high || d.price));
+          const low = Math.min(...sorted.map(d => d.low || d.price));
+          
           setLatest({
             current: end,
             delta: (end - start).toFixed(2),
             percent: (((end - start) / start) * 100).toFixed(2),
-            high: Math.max(...sorted.map(d => d.price)),
-            low: Math.min(...sorted.map(d => d.price)),
+            high: high,
+            low: low,
             avg: sorted.reduce((sum, d) => sum + d.price, 0) / sorted.length
           });
         }
       })
-      .catch(console.error)
+      .catch(error => {
+        console.error('Error fetching stock history:', error);
+        setHistory([]);
+        setLatest(null);
+      })
       .finally(() => setLoading(false));
   }, [symbol]);
 

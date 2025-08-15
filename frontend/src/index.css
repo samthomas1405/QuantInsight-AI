@@ -21,21 +21,29 @@
   
   /* Light Theme Surfaces */
   --bg-primary: #ffffff;
-  --bg-secondary: #fafafa;
-  --bg-tertiary: #f5f5f5;
+  --bg-secondary: #fafbfd;
+  --bg-tertiary: #f7f8fa;
+  --bg-page: #f9fafb;
   --surface: #ffffff;
-  --surface-hover: #f9fafb;
+  --surface-hover: #fcfcfd;
+  --surface-elevated: #ffffff;
   --border: #e5e7eb;
+  --border-light: #f3f4f6;
   --border-strong: #d1d5db;
   
-  /* Modern Accent Colors */
-  --accent-blue: #3b82f6;
-  --accent-indigo: #6366f1;
-  --accent-purple: #8b5cf6;
-  --accent-pink: #ec4899;
-  --accent-green: #10b981;
-  --accent-amber: #f59e0b;
-  --accent-red: #ef4444;
+  /* Financial Colors - Accessible */
+  --color-positive: #059669;
+  --color-positive-light: #10b981;
+  --color-positive-bg: #ecfdf5;
+  --color-positive-border: #d1fae5;
+  --color-negative: #dc2626;
+  --color-negative-light: #ef4444;
+  --color-negative-bg: #fef2f2;
+  --color-negative-border: #fee2e2;
+  --color-neutral: #6b7280;
+  --color-neutral-light: #9ca3af;
+  --color-neutral-bg: #f9fafb;
+  --color-neutral-border: #e5e7eb;
   
   /* Text Colors for Light Theme */
   --text-primary: #111827;
@@ -75,6 +83,54 @@
   --radius-xl: 1rem;
   --radius-2xl: 1.5rem;
   --radius-full: 9999px;
+  
+  /* Spacing Scale - Consistent Rhythm */
+  --space-0-5: 0.125rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  
+  /* Component Spacing */
+  --card-padding: var(--space-6);
+  --card-gap: var(--space-4);
+  --section-gap: var(--space-8);
+  --inline-gap: var(--space-3);
+}
+
+/* Dark Theme Variables */
+.dark {
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #262626;
+  --bg-page: #0a0a0a;
+  --surface: #1a1a1a;
+  --surface-hover: #262626;
+  --surface-elevated: #2a2a2a;
+  --border: #333333;
+  --border-light: #262626;
+  --border-strong: #404040;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+  --text-muted: #525252;
+  
+  --color-positive: #10b981;
+  --color-positive-light: #34d399;
+  --color-positive-bg: #064e3b;
+  --color-positive-border: #065f46;
+  --color-negative: #ef4444;
+  --color-negative-light: #f87171;
+  --color-negative-bg: #7f1d1d;
+  --color-negative-border: #991b1b;
 }
 
 * {
@@ -89,15 +145,24 @@ html {
 
 body {
   margin: 0;
-  background-color: #fafbfc;
+  background-color: var(--bg-page);
   color: var(--text-primary);
   overflow-x: hidden;
   line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 body.dark {
-  background-color: #0f0f0f;
+  background-color: #0a0a0a;
   color: #ffffff;
+}
+
+#root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Custom scrollbar */
@@ -128,12 +193,38 @@ body.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 
 /* Production-ready app background */
 .app-background {
-  background: linear-gradient(135deg, #fafbfc 0%, #f8f9fb 100%);
+  background: var(--bg-page);
   min-height: 100vh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .app-background.dark {
-  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  background: #0a0a0a;
+}
+
+/* Consistent panel styling */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.panel:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.panel.dark {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.panel.dark:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Sidebar background */
@@ -152,7 +243,27 @@ body.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 /* Content area styling */
 .content-area {
   background: transparent;
-  padding: 0;
+  padding: 2rem;
+  min-height: calc(100vh - 5rem);
+}
+
+@media (min-width: 1024px) {
+  .content-area {
+    padding: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .content-area {
+    padding: 3rem 4rem;
+  }
+}
+
+/* Content wrapper for max-width constraint */
+.content-wrapper {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 /* Section headers with bottom border */
@@ -168,21 +279,28 @@ body.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 
 /* Flat design for data rows */
 .data-row {
-  padding: 16px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-  transition: background-color 0.2s ease;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .data-row:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .data-row.dark {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(30, 30, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .data-row.dark:hover {
-  background-color: rgba(255, 255, 255, 0.04);
+  background-color: rgba(30, 30, 30, 0.8);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Typography */
@@ -579,4 +697,54 @@ body.dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
 
 .shadow-hover:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Navigation Bar Styles */
+.nav-link-active {
+  position: relative;
+}
+
+.nav-link-active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 2px;
+}
+
+/* Mobile Navigation Scrollbar */
+.nav-scroll::-webkit-scrollbar {
+  height: 3px;
+}
+
+.nav-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Responsive Navigation Container */
+@media (max-width: 768px) {
+  .content-area {
+    padding: 1.5rem;
+  }
+}
+
+/* Navigation Bar Height */
+.nav-height {
+  height: 4rem;
+}
+
+@media (max-width: 768px) {
+  .nav-height {
+    height: auto;
+    min-height: 4rem;
+  }
 }
