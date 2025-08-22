@@ -52,9 +52,14 @@ export const fetchStockNews = async (symbol) => {
 // Original functions for NewsFeed.jsx compatibility
 const API_URL = 'http://127.0.0.1:8000/news/custom-summary';
 
-export const getReports = async (userToken) => {
+export const getReports = async (userToken, selectedTickers = null) => {
   try {
-    const response = await axios.get(API_URL, {
+    // If selected tickers provided, pass them as query params
+    const url = selectedTickers && selectedTickers.length > 0
+      ? `${API_URL}?tickers=${selectedTickers.join(',')}`
+      : API_URL;
+      
+    const response = await axios.get(url, {
       headers: {
         Authorization: `Bearer ${userToken}`,
         'Content-Type': 'application/json'

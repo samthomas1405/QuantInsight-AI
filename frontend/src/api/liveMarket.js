@@ -6,6 +6,7 @@ const ALPHA_API_URL = 'http://127.0.0.1:8000/market-alpha';
 const POLYGON_API_URL = 'http://127.0.0.1:8000/market-polygon';
 const FREE_API_URL = 'http://127.0.0.1:8000/market-free';
 const OPTIMIZED_API_URL = 'http://127.0.0.1:8000/market';
+const FINNHUB_API_URL = 'http://127.0.0.1:8000/market-finnhub';
 
 // Add request/response interceptors for debugging
 axios.interceptors.request.use(
@@ -46,9 +47,10 @@ axios.interceptors.response.use(
 
 // 🔁 Get live market data for followed stocks
 export const fetchLiveFollowedMarketData = async (token) => {
-  // Use the fast Yahoo Finance endpoint directly since it was working well
+  // Use Finnhub as primary (reliable, 60 req/min), with fallbacks
   const endpoints = [
-    { url: `${API_URL}/followed`, name: 'Yahoo Finance Direct' }
+    { url: `${FINNHUB_API_URL}/followed`, name: 'Finnhub (Primary)' },
+    { url: `${ALPHA_API_URL}/followed`, name: 'Alpha Vantage (Backup)' }
   ];
 
   for (const endpoint of endpoints) {
@@ -79,8 +81,8 @@ export const fetchLiveFollowedMarketData = async (token) => {
 
 export const fetchStockHistory = async (symbol) => {
   try {
-    // Try the regular Yahoo Finance endpoint first (it already works well for history)
-    const res = await axios.get(`${API_URL}/history/${symbol}`, {
+    // Use Finnhub for historical data
+    const res = await axios.get(`${FINNHUB_API_URL}/history/${symbol}`, {
       timeout: 10000, // 10 second timeout
     });
     return res.data;

@@ -30,10 +30,11 @@ app.include_router(user_stocks.router)
 app.include_router(ai_assistant.router)
 
 # Import and include additional market routers
-from app.routes import live_market_simple, live_market_alpha, live_market_polygon
+from app.routes import live_market_simple, live_market_alpha, live_market_polygon, live_market_finnhub
 app.include_router(live_market_simple.router)
 app.include_router(live_market_alpha.router)
 app.include_router(live_market_polygon.router)
+app.include_router(live_market_finnhub.router)
 
 # Commenting out the new routers that are causing issues
 # from app.routes import market_optimized, market_free

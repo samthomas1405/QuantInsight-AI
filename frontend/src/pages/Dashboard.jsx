@@ -5,7 +5,7 @@ import { TrendingUp, Brain, MessageSquare, Mic, Home, Activity, Sparkles, Sun, M
 import { useTheme } from '../contexts/ThemeContext';
 import DashboardHome from '../components/DashboardHome';
 import MarketDataTable from '../components/MarketDataTable';
-import NewsFeed from '../components/NewsFeed';
+import MultiAgentPredictor from '../components/MultiAgentPredictor';
 import SentimentAnalyzer from '../components/SentimentAnalyzer';
 import AudioUploader from '../components/AudioUploader';
 import AIFinancialAssistant from '../components/AIFinancialAssistant';
@@ -33,7 +33,7 @@ const TABS = [
     path: "predictor",
     label: "Multi-Agent Predictor", 
     icon: Brain, 
-    component: <NewsFeed />,
+    component: <MultiAgentPredictor />,
     color: "from-emerald-500 to-green-600"
   },
   { 
@@ -206,7 +206,7 @@ const Dashboard = () => {
         <Routes>
           <Route path="/" element={<DashboardHome />} />
           <Route path="/market-data" element={<MarketDataTable />} />
-          <Route path="/predictor" element={<NewsFeed />} />
+          <Route path="/predictor" element={<MultiAgentPredictor />} />
           <Route path="/ai-assistant" element={<AIFinancialAssistant />} />
           <Route path="/sentiment" element={<SentimentAnalyzer />} />
           <Route path="/transcriber" element={<AudioUploader />} />

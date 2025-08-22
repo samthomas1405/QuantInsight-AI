@@ -481,7 +481,7 @@ def test_llm_thoroughly(llm):
         return False
 
 @router.get("/custom-summary")
-def generate_reports(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def generate_reports(tickers: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Generate comprehensive AI-powered stock prediction reports using Gemini multi-agent system WITH PARALLEL EXECUTION"""
     try:
         logger.info(f"=== Starting PARALLEL GEMINI MULTI-AGENT stock prediction for user {current_user.id} ===")
@@ -489,16 +489,23 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
         # Validate environment for Gemini
         google_api_key, serper_api_key = validate_environment()
         
-        # Get followed tickers
-        tickers = get_followed_stock_symbols(current_user.id, db)
-        if not tickers:
-            tickers = ["AAPL", "MSFT"]  # Default to major stocks for demo
-            logger.info("No followed stocks found, using AAPL and MSFT as defaults")
+        # Get tickers from query params or user's followed stocks
+        ticker_list = []
+        if tickers:
+            # Parse comma-separated tickers from query params
+            ticker_list = [t.strip().upper() for t in tickers.split(',') if t.strip()]
+            logger.info(f"Using selected tickers from query params: {ticker_list}")
         else:
-            # Limit to prevent overwhelming analysis - you can increase this since it's parallel now
-            tickers = tickers[:3]  # Process up to 3 tickers in parallel
+            # Fall back to user's followed stocks
+            ticker_list = get_followed_stock_symbols(current_user.id, db)
+            if not ticker_list:
+                ticker_list = ["AAPL", "MSFT"]  # Default to major stocks for demo
+                logger.info("No followed stocks found, using AAPL and MSFT as defaults")
+            else:
+                # Limit to prevent overwhelming analysis - you can increase this since it's parallel now
+                ticker_list = ticker_list[:3]  # Process up to 3 tickers in parallel
             
-        logger.info(f"Processing tickers for parallel Gemini multi-agent prediction: {tickers}")
+        logger.info(f"Processing tickers for parallel Gemini multi-agent prediction: {ticker_list}")
         
         # Initialize Gemini LLM with prediction testing
         llm = None
@@ -544,10 +551,10 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
         
         # Execute all tickers in parallel using the SAME comprehensive analysis
         prediction_reports = execute_parallel_stock_analysis(
-            tickers, 
+            ticker_list,  # Use ticker_list instead of tickers
             llm, 
             tools, 
-            max_workers=min(3, len(tickers))  # Use up to 3 workers, limited by number of tickers
+            max_workers=min(3, len(ticker_list))  # Use ticker_list length
         )
         
         end_time = time.time()
@@ -563,21 +570,21 @@ def generate_reports(db: Session = Depends(get_db), current_user: User = Depends
         response = {
             "reports": prediction_reports,
             "summary": {
-                "total_tickers": len(tickers),
+                "total_tickers": len(ticker_list),
                 "successful_predictions": successful_predictions,
-                "success_rate": f"{(successful_predictions/len(tickers)*100):.1f}%" if tickers else "0%",
+                "success_rate": f"{(successful_predictions/len(ticker_list)*100):.1f}%" if ticker_list else "0%",
                 "analysis_type": "parallel_gemini_multi_agent_prediction",
                 "model": "gemini-2.0-flash",
                 "execution_time_seconds": round(total_time, 2),
-                "average_time_per_ticker": round(total_time / len(tickers), 2) if tickers else 0,
-                "parallel_workers_used": min(3, len(tickers)),
+                "average_time_per_ticker": round(total_time / len(ticker_list), 2) if ticker_list else 0,
+                "parallel_workers_used": min(3, len(ticker_list)),
                 "timestamp": datetime.now().isoformat()
             },
             "status": "completed",
-            "message": f"Parallel Gemini multi-agent prediction completed in {total_time:.1f}s: {successful_predictions}/{len(tickers)} successful predictions"
+            "message": f"Parallel Gemini multi-agent prediction completed in {total_time:.1f}s: {successful_predictions}/{len(ticker_list)} successful predictions"
         }
         
-        logger.info(f"=== PARALLEL GEMINI MULTI-AGENT prediction completed in {total_time:.2f}s: {successful_predictions}/{len(tickers)} ===")
+        logger.info(f"=== PARALLEL GEMINI MULTI-AGENT prediction completed in {total_time:.2f}s: {successful_predictions}/{len(ticker_list)} ===")
         return response
         
     except HTTPException:
