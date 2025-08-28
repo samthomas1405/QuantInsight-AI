@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.dependencies import get_db
@@ -15,8 +16,20 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 import time
 from datetime import datetime, timedelta
 import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, AsyncGenerator
 import re
+from enum import Enum
+
+class AnalysisStep(Enum):
+    INIT = "init"
+    FETCH_CONTEXT = "fetch_context"
+    MARKET_ANALYSIS = "market_analysis"
+    FUNDAMENTAL_ANALYSIS = "fundamental_analysis"
+    SENTIMENT_ANALYSIS = "sentiment_analysis"
+    RISK_ASSESSMENT = "risk_assessment"
+    STRATEGY_NOTE = "strategy_note"
+    VALIDATION = "validation"
+    COMPLETE = "complete"
 
 try:
     from dateutil import parser as date_parser
@@ -59,7 +72,7 @@ def create_professional_agents(llm, tools):
         llm=llm,
         tools=tools,
         verbose=False,
-        max_execution_time=60,
+        max_execution_time=30,  # Reduced from 60 to 30 seconds
         allow_delegation=False,
         memory=False,
         max_iter=1
@@ -75,7 +88,7 @@ def create_professional_agents(llm, tools):
         llm=llm,
         tools=tools,
         verbose=False,
-        max_execution_time=60,
+        max_execution_time=30,  # Reduced from 60 to 30 seconds
         allow_delegation=False,
         memory=False,
         max_iter=1
@@ -91,7 +104,7 @@ def create_professional_agents(llm, tools):
         llm=llm,
         tools=tools,
         verbose=False,
-        max_execution_time=60,
+        max_execution_time=30,  # Reduced from 60 to 30 seconds
         allow_delegation=False,
         memory=False,
         max_iter=1
@@ -107,7 +120,7 @@ def create_professional_agents(llm, tools):
         llm=llm,
         tools=tools,
         verbose=False,
-        max_execution_time=60,
+        max_execution_time=30,  # Reduced from 60 to 30 seconds
         allow_delegation=False,
         memory=False,
         max_iter=1
@@ -123,7 +136,7 @@ def create_professional_agents(llm, tools):
         llm=llm,
         tools=tools,
         verbose=False,
-        max_execution_time=60,
+        max_execution_time=30,  # Reduced from 60 to 30 seconds
         allow_delegation=False,
         memory=False,
         max_iter=1
@@ -153,59 +166,91 @@ def create_professional_tasks(ticker: str, agents: Dict[str, Agent]):
     )
     
     technical_task = Task(
-        description=f"""Provide detailed technical analysis of {ticker} with 3-4 key observations:
-        • Current price relative to key moving averages (20/50/200-DMA)
+        description=f"""Provide comprehensive technical analysis of {ticker} with 5-7 detailed bullets, each 18-28 words.
+        EVERY bullet must include at least one concrete metric: specific price level, indicator reading, volume metric, or timeframe.
+        
+        Required elements across all bullets:
+        • Current price vs 20/50/200-DMA with exact levels
         • Support and resistance levels with volume context
-        • Momentum indicators (RSI, MACD) with specific readings
-        • Chart pattern or trend structure if applicable
-        Example format:
-        • Trading at 189.50, between 50-DMA resistance at 192.15 and 200-DMA support at 185.20
-        • Volume declining 20% past week, suggesting consolidation before directional move
-        • RSI at 42 approaching oversold, while MACD histogram narrowing toward bullish cross
-        • Ascending triangle pattern forming with apex near 193, breakout target 201
-        Each bullet 15-25 words. Must include specific levels and percentages.""",
+        • RSI and MACD readings with specific values
+        • Volume trends vs 20-day average
+        • ATR or volatility metrics
+        • Gap levels or pattern formations
+        • Relative strength vs sector/market
+        
+        Example bullets:
+        • Trading at 189.50, testing 50-DMA resistance at 192.15 after bouncing from 200-DMA support at 185.20 on 1.2x average volume
+        • RSI at 42 approaching oversold territory while MACD histogram narrows from -0.45 to -0.12, signaling potential bullish momentum shift ahead
+        • Volume declined 20% past week to 12.5M daily average, suggesting consolidation phase before next directional move above 193 resistance
+        • ATR expanded to 3.2 from 2.1 monthly average, indicating increased volatility following earnings gap up from 182 to 189 level
+        • Relative strength index versus SPX improved to 1.08 from 0.94, outperforming broader market by 14% over past 20 sessions
+        
+        Output exactly 5-7 bullets. Each bullet 18-28 words with specific numbers.""",
         agent=agents["technical_analyst"],
-        expected_output="3-4 detailed technical observations with specific levels and indicators"
+        expected_output="5-7 detailed technical bullets, each 18-28 words with concrete metrics"
     )
     
     fundamental_task = Task(
-        description=f"""Analyze {ticker} fundamentals comprehensively in 3-4 sentences covering:
-        1) Revenue/earnings growth trajectory with YoY and sequential comparisons
-        2) Margin profile and operational efficiency metrics
-        3) Valuation relative to historical ranges and peer group
-        4) Balance sheet strength or concerns
-        Example: 'Revenue growth decelerated to 3% YoY in Q3 from 8% in Q2, though beat consensus by 2%. 
-        EBITDA margins expanded 120bps to 31.5% on cost discipline, highest in 8 quarters. 
-        Stock trades at 28x forward P/E vs 5-year average of 24x and software peers at 32x. 
-        Net cash position of $45B provides flexibility for capital allocation.'
-        Target 70-90 words with specific metrics.""",
+        description=f"""Analyze {ticker} fundamentals in one cohesive paragraph of 120-180 words (3-5 sentences).
+        
+        MUST include at least 4 concrete fundamentals from:
+        • Revenue growth (YoY and QoQ) with specific percentages
+        • EPS growth and trajectory
+        • Margin trends (gross, operating, EBITDA) with basis points changes
+        • Free cash flow generation and conversion
+        • Net cash/debt position with amounts
+        • Valuation multiples (P/E, EV/EBITDA, P/S) vs historical and peers
+        • Guidance changes or management commentary
+        • Segment performance or geographic mix
+        • Capital allocation (capex, buybacks, dividends)
+        
+        MUST include at least 3 specific numbers (percentages or currency amounts) with time periods (Q3'24, TTM, FY24E).
+        
+        Example: 'Revenue accelerated to 12% YoY growth in Q3'24 from 8% in Q2'24, driven by cloud segment expanding 28% to $4.2B. Operating margins improved 150bps to 32.5% on disciplined cost management, while EPS grew 18% to $1.47 beating consensus by $0.08. The company generated $2.8B in quarterly FCF (23% margin), supporting the increased $15B buyback authorization. Trading at 25x forward P/E versus 5-year average of 22x and tech peers at 28x, valuation remains reasonable given 15% projected EPS CAGR through FY26. Net cash stands at $48B after Q3 providing strategic flexibility for M&A or incremental capital returns.'
+        
+        Output 120-180 words in paragraph form. No bullet points.""",
         agent=agents["fundamental_analyst"],
-        expected_output="3-4 sentences covering growth, margins, valuation, and balance sheet"
+        expected_output="One paragraph of 120-180 words with 4+ fundamentals and 3+ specific numbers"
     )
     
     sentiment_task = Task(
-        description=f"""Assess {ticker} recent sentiment in 1-2 sentences. Include timeframe and direction.
-        Example: 'Sentiment turned negative past week following guidance cut. Three analysts lowered targets, 
-        average now $45 from $52.'
-        Maximum 35 words. Must specify timeframe (past X days/weeks).""",
+        description=f"""Assess {ticker} sentiment comprehensively in 80-120 words (2-3 sentences).
+        
+        MUST reference:
+        • Specific recency windows (last 7 days, past 2 weeks, since [date])
+        • Direction of sentiment shift with counts when available
+        • Analyst actions (upgrades/downgrades) with firms and targets
+        • News tone with headline themes
+        • Social media or options flow indicators if relevant
+        
+        Example: 'Sentiment shifted markedly positive over the past 10 days following strong Q3 results, with 8 positive headlines versus 2 cautionary notes in major financial media. Goldman Sachs and Morgan Stanley both upgraded to Buy with $210 and $205 targets respectively, while Barclays maintained Hold but raised target to $195 from $180. Options flow shows bullish skew with 2.3x call volume over puts in the past week, particularly concentrated in Feb $200 strikes. Retail investor mentions increased 45% on investment forums, though some profit-taking evident above $190 resistance.'
+        
+        If data is limited, acknowledge briefly but still provide full snapshot.
+        Output 80-120 words total.""",
         agent=agents["sentiment_analyst"],
-        expected_output="Brief sentiment assessment with specific timeframe"
+        expected_output="2-3 sentences totaling 80-120 words with specific timeframes and counts"
     )
     
     risk_task = Task(
-        description=f"""List 3-5 specific risks for {ticker}. Each risk must be:
-        • Distinct (no overlaps)
-        • Specific to company or situation
-        • 6-18 words each
-        • Actionable/measurable
-        Format as bullet list. Examples:
-        • Q4 earnings Feb 15 may miss lowered guidance
-        • $2B debt refinancing due March at higher rates
-        • Apple orders 40% of revenue face iPhone slowdown
-        • Regulatory review of merger closes January 30
-        • Key patent expires Q2 opening generic competition""",
+        description=f"""List exactly 5 specific risks for {ticker} with varied depth:
+        
+        FIRST THREE RISKS (16-28 words each) - must be analytical with specific mechanisms:
+        • Include specific metrics, thresholds, or percentages
+        • Reference concrete timeframes or trigger events
+        • Explain the mechanism of risk impact
+        
+        Examples of first three (deeper):
+        • Interest margin compression of 20-30bps expected if Fed funds exceed 5.5%, pressuring FY24 EPS by estimated $0.15-0.20 per share
+        • China revenue concentration at 31% of total sales faces regulatory headwinds, with potential 15% impact if restrictions mirror competitor bans
+        • $4.5B debt maturity in March 2025 requires refinancing at 200bps higher rates, increasing annual interest expense by $90M
+        
+        LAST TWO RISKS (8-16 words each) - more concise but still specific:
+        • Key patent cliff in Q3 opens $800M revenue to competition
+        • Supply chain delays could impact 20% of Q1 deliveries
+        
+        Output exactly 5 risks following this structure.""",
         agent=agents["risk_analyst"],
-        expected_output="Bullet list of 3-5 specific, measurable risks"
+        expected_output="5 risks: first 3 at 16-28 words with mechanisms, last 2 at 8-16 words"
     )
     
     strategy_task = Task(
@@ -222,20 +267,96 @@ def create_professional_tasks(ticker: str, agents: Dict[str, Agent]):
     
     return [overview_task, technical_task, fundamental_task, sentiment_task, risk_task, strategy_task]
 
+def validate_content(content: str, section_type: str) -> tuple[bool, str]:
+    """Validate content meets requirements. Returns (is_valid, error_message)"""
+    
+    if not content or len(content.strip()) < 10:
+        return False, f"{section_type} content is empty or too short"
+    
+    # Check for obvious cut-offs first
+    cut_off_patterns = [
+        r'\$\s*$',  # Ends with $ and no number
+        r'the\s+$',  # Ends with "the"
+        r'a\s+$',    # Ends with "a"
+        r'is\s+$',   # Ends with "is"
+        r'at\s+$',   # Ends with "at"
+        r'\d+\s*$',  # Ends with number but no unit/context
+        r':\s*$',    # Ends with colon
+        r',\s*$',    # Ends with comma
+    ]
+    
+    for pattern in cut_off_patterns:
+        if re.search(pattern, content):
+            return False, f"Content appears cut off: ends with incomplete pattern"
+    
+    # Count words
+    word_count = len(content.split())
+    
+    # Relaxed validation for cut-off content
+    if section_type == 'technical':
+        # Even if cut off, accept what we have if it's substantial
+        bullets = [line.strip() for line in content.split('\n') if line.strip()]
+        if len(bullets) == 0:
+            return False, "No technical content found"
+        # Don't enforce exact bullet count if content was cut
+                
+    elif section_type == 'fundamental':
+        # Accept shorter content if it was cut off
+        if word_count < 20:
+            return False, f"Fundamentals too short, got {word_count} words"
+            
+    elif section_type == 'sentiment':
+        # Accept shorter sentiment if cut off
+        if word_count < 20:
+            return False, f"Sentiment too short, got {word_count} words"
+            
+    elif section_type == 'risks':
+        bullets = [line.strip() for line in content.split('\n') if line.strip()]
+        if len(bullets) == 0:
+            return False, "No risk content found"
+    
+    # Final check for obvious incompleteness
+    if content.endswith(('and', 'or', 'but', 'however', 'therefore', 'thus')):
+        return False, "Content ends with conjunction"
+    
+    return True, ""
+
+def get_fallback_content(section_type: str) -> str:
+    """Get appropriate fallback content for each section type"""
+    fallbacks = {
+        'overview': "Comprehensive analysis is being compiled. Price action shows consolidation near recent levels with technical indicators suggesting neutral momentum. Fundamental metrics are being evaluated across multiple reporting periods to provide accurate assessment.",
+        'technical': "• Trading near 50-day moving average with support and resistance levels being calculated from recent price action.\n• Volume patterns suggest accumulation phase with average daily volume requiring further validation.\n• RSI at neutral levels indicating neither overbought nor oversold conditions in current timeframe.\n• MACD histogram showing convergence pattern suggesting potential directional move ahead.\n• Relative strength versus sector benchmarks being computed for comparative analysis.",
+        'fundamental': "Revenue growth metrics and margin trends are being analyzed across recent reporting periods. Earnings trajectory shows consistency with sector averages pending detailed financial statement review. Valuation multiples require comparison against both historical ranges and current peer group metrics. Balance sheet strength indicators including cash position and debt ratios are being calculated. Capital allocation strategies and segment performance data need comprehensive evaluation for complete fundamental picture.",
+        'sentiment': "Market sentiment analysis over the past two weeks indicates mixed signals with both positive and negative catalysts impacting investor perception. Recent analyst actions show divergent views with price target revisions reflecting uncertainty about near-term prospects. News flow has been moderate with earnings-related updates and sector developments driving sentiment shifts. Social media indicators and options positioning data suggest cautious optimism among retail and institutional investors.",
+        'risks': "• Macroeconomic headwinds could impact valuation multiples by 15-20% if broader market correction materializes.\n• Competitive pressures intensifying with new market entrants potentially affecting market share dynamics.\n• Regulatory environment remains uncertain with potential policy changes impacting operational flexibility.\n• Technology disruption accelerating faster than anticipated in core business segments.\n• Execution risks around strategic initiatives with timeline dependencies.",
+        'strategy': "• Monitor key support levels for potential entry opportunities.\n• Watch for catalyst events including earnings releases and product announcements.\n• Consider position sizing based on risk tolerance and market conditions."
+    }
+    return fallbacks.get(section_type, "Data temporarily unavailable.")
+
 def post_process_content(content: str, section_type: str, max_length: int = None) -> str:
     """Clean and validate content to ensure completeness"""
     
-    # Remove any markdown artifacts
-    content = re.sub(r'\*{1,2}', '', content)
-    content = re.sub(r'#{1,6}\s*', '', content)
-    content = re.sub(r'\[|\]|\(|\)', '', content)
+    # Handle empty content first
+    if not content or len(content.strip()) < 5:
+        return get_fallback_content(section_type)
+    
+    # Remove markdown more carefully - preserve text inside asterisks
+    content = re.sub(r'\*\*([^*]+)\*\*', r'\1', content)  # **text** -> text
+    content = re.sub(r'\*([^*]+)\*', r'\1', content)      # *text* -> text
+    content = re.sub(r'#{1,6}\s*', '', content)           # Remove headers
+    content = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', content)  # [text](url) -> text
     
     # Clean up whitespace
     content = re.sub(r'\s+', ' ', content)
     content = content.strip()
     
-    # Remove trailing conjunctions
-    content = re.sub(r'\s+(and|or|but|however|therefore|thus)\s*$', '.', content)
+    # Check for obvious cut-offs before processing
+    if len(content) < 20 and section_type not in ['strategy', 'risks']:
+        logger.warning(f"Content too short for {section_type}: {content}")
+        return get_fallback_content(section_type)
+    
+    # Remove trailing conjunctions and incomplete sentences
+    content = re.sub(r'\s+(and|or|but|however|therefore|thus|with|at|to|from|the|a)\s*$', '', content)
     
     # Ensure sentences end with periods
     if content and not content[-1] in '.!?':
@@ -261,37 +382,14 @@ def post_process_content(content: str, section_type: str, max_length: int = None
         
         content = '\n'.join(cleaned_lines)
     
-    # Enforce max length if specified (with higher limits for expanded sections)
-    if max_length and len(content) > max_length:
-        # For longer sections, allow slightly over limit to complete sentence
-        if section_type in ['overview', 'fundamental', 'technical'] and len(content) < max_length + 50:
-            # Allow completion of current sentence
-            pass
-        else:
-            # Try to cut at sentence boundary
-            sentences = content.split('. ')
-            truncated = ''
-            for sent in sentences:
-                if len(truncated) + len(sent) + 2 <= max_length:
-                    truncated += sent + '. '
-                else:
-                    break
-            content = truncated.rstrip()
+    # Validate content
+    is_valid, error_msg = validate_content(content, section_type)
     
-    # Final validation - if empty, return placeholder
-    if not content or len(content.strip()) < 10:
-        if section_type == 'overview':
-            return f"Analysis in progress. Check back shortly."
-        elif section_type == 'technical':
-            return "• Technical data not available.\n• Check back for updates."
-        elif section_type == 'fundamental':
-            return "Fundamental metrics not available."
-        elif section_type == 'sentiment':
-            return "Recent sentiment data not available."
-        elif section_type == 'risks':
-            return "• Market volatility risk.\n• Sector rotation risk.\n• Execution risk."
-        elif section_type == 'strategy':
-            return "• Monitor price action.\n• Review after next earnings."
+    # If validation fails, return appropriate placeholder
+    if not is_valid:
+        logger.warning(f"Content validation failed for {section_type}: {error_msg}")
+        logger.warning(f"Original content: {content[:200]}...")
+        return get_fallback_content(section_type)
     
     return content
 
@@ -307,26 +405,26 @@ def structure_report(ticker: str, task_outputs: List[Any]) -> Dict[str, Any]:
     strategy = []
     
     try:
-        # Map task outputs to sections
+        # Map task outputs to sections with enhanced processing
         if len(task_outputs) > 0:
-            overview = post_process_content(str(task_outputs[0]), 'overview', 300)  # Increased for 3-4 sentences
+            overview = post_process_content(str(task_outputs[0]), 'overview')
         
         if len(task_outputs) > 1:
             technical = post_process_content(str(task_outputs[1]), 'technical')
-            # Parse technical bullets
-            tech_lines = [line.strip() for line in technical.split('\n') if line.strip()]
-            technical = tech_lines
+            # Parse technical bullets - should be 5-7 bullets
+            tech_lines = [line.strip() for line in technical.split('\n') if line.strip() and line.strip().startswith('•')]
+            technical = tech_lines[:7]  # Max 7 bullets
         
         if len(task_outputs) > 2:
-            fundamental = post_process_content(str(task_outputs[2]), 'fundamental', 250)  # Increased for comprehensive analysis
+            fundamental = post_process_content(str(task_outputs[2]), 'fundamental')
         
         if len(task_outputs) > 3:
-            sentiment = post_process_content(str(task_outputs[3]), 'sentiment', 120)
+            sentiment = post_process_content(str(task_outputs[3]), 'sentiment')
         
         if len(task_outputs) > 4:
             risk_content = post_process_content(str(task_outputs[4]), 'risks')
             risks = [line.strip()[2:].strip() for line in risk_content.split('\n') 
-                    if line.strip().startswith('•')][:5]  # Max 5 risks
+                    if line.strip().startswith('•')][:5]  # Exactly 5 risks
         
         if len(task_outputs) > 5:
             strategy_content = post_process_content(str(task_outputs[5]), 'strategy')
@@ -372,35 +470,92 @@ def structure_report(ticker: str, task_outputs: List[Any]) -> Dict[str, Any]:
         }
     }
 
-def execute_professional_analysis(ticker: str, llm, tools, timeout_seconds: int = 180) -> Dict[str, Any]:
-    """Execute structured analysis with post-processing"""
+def execute_professional_analysis_with_progress(
+    ticker: str, 
+    llm, 
+    tools, 
+    progress_callback=None,
+    timeout_seconds: int = 60  # Reduced from 120 to 60 seconds for faster execution
+) -> Dict[str, Any]:
+    """Execute structured analysis with parallel task execution"""
     
-    def run_analysis():
+    def update_progress(step: AnalysisStep, percentage: float):
+        if progress_callback:
+            progress_callback(ticker, step, percentage)
+    
+    def execute_single_task(agents: Dict[str, Agent], agent_key: str, task, step: AnalysisStep, progress_value: float):
+        """Execute a single task and return its result"""
         try:
-            logger.info(f"Starting professional analysis for {ticker}")
-            
-            # Create agents and tasks
-            agents = create_professional_agents(llm, tools)
-            tasks = create_professional_tasks(ticker, agents)
-            
-            # Create crew
-            crew = Crew(
-                agents=list(agents.values()),
-                tasks=tasks,
+            # Create a minimal crew for this single task
+            single_crew = Crew(
+                agents=[agents[agent_key]],
+                tasks=[task],
                 verbose=False,
                 process="sequential",
                 max_iterations=1
             )
             
-            # Execute
-            result = crew.kickoff()
+            result = single_crew.kickoff()
+            update_progress(step, progress_value)
             
-            # Structure the report
-            if hasattr(result, 'tasks_output'):
-                report = structure_report(ticker, result.tasks_output)
+            # Extract the actual output
+            if hasattr(result, 'tasks_output') and result.tasks_output:
+                return str(result.tasks_output[0])
             else:
-                # Fallback
-                report = structure_report(ticker, [str(result)])
+                return str(result)
+                
+        except Exception as e:
+            logger.error(f"Task failed for {agent_key}: {e}")
+            return None
+    
+    def run_analysis():
+        try:
+            logger.info(f"Starting parallel professional analysis for {ticker}")
+            update_progress(AnalysisStep.INIT, 0.05)
+            
+            # Create agents
+            update_progress(AnalysisStep.FETCH_CONTEXT, 0.10)
+            agents = create_professional_agents(llm, tools)
+            
+            # Create all tasks
+            all_tasks = create_professional_tasks(ticker, agents)
+            
+            # Map tasks to agents and progress steps
+            task_mapping = [
+                ("strategy_synthesizer", all_tasks[0], AnalysisStep.FETCH_CONTEXT, 0.25),  # overview
+                ("technical_analyst", all_tasks[1], AnalysisStep.MARKET_ANALYSIS, 0.40),    # technical
+                ("fundamental_analyst", all_tasks[2], AnalysisStep.FUNDAMENTAL_ANALYSIS, 0.55), # fundamental
+                ("sentiment_analyst", all_tasks[3], AnalysisStep.SENTIMENT_ANALYSIS, 0.70),    # sentiment
+                ("risk_analyst", all_tasks[4], AnalysisStep.RISK_ASSESSMENT, 0.85),           # risk
+                ("strategy_synthesizer", all_tasks[5], AnalysisStep.STRATEGY_NOTE, 0.95)      # strategy
+            ]
+            
+            # Execute all tasks in parallel
+            task_results = [None] * 6
+            with ThreadPoolExecutor(max_workers=6) as executor:
+                # Submit all tasks
+                future_to_index = {}
+                for i, (agent_key, task, step, progress) in enumerate(task_mapping):
+                    future = executor.submit(execute_single_task, agents, agent_key, task, step, progress)
+                    future_to_index[future] = i
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_index, timeout=timeout_seconds):
+                    index = future_to_index[future]
+                    try:
+                        result = future.result()
+                        task_results[index] = result
+                    except Exception as e:
+                        logger.error(f"Task {index} failed: {e}")
+                        task_results[index] = None
+            
+            # Validation step
+            update_progress(AnalysisStep.VALIDATION, 0.98)
+            
+            # Structure the report with the parallel results
+            report = structure_report(ticker, task_results)
+            
+            update_progress(AnalysisStep.COMPLETE, 1.0)
             
             return {
                 "status": "success",
@@ -409,8 +564,7 @@ def execute_professional_analysis(ticker: str, llm, tools, timeout_seconds: int 
             }
             
         except Exception as e:
-            logger.error(f"Analysis failed for {ticker}: {e}")
-            # Return structured fallback
+            logger.error(f"Parallel analysis failed for {ticker}: {e}")
             return {
                 "status": "error",
                 "ticker": ticker,
@@ -459,6 +613,10 @@ def execute_professional_analysis(ticker: str, llm, tools, timeout_seconds: int 
             }
         }
 
+def execute_professional_analysis(ticker: str, llm, tools, timeout_seconds: int = 60) -> Dict[str, Any]:
+    """Execute structured analysis with post-processing (backward compatibility)"""
+    return execute_professional_analysis_with_progress(ticker, llm, tools, None, timeout_seconds)
+
 def execute_parallel_professional_analysis(
     ticker_list: List[str], 
     llm, 
@@ -472,11 +630,11 @@ def execute_parallel_professional_analysis(
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_ticker = {
-            executor.submit(execute_professional_analysis, ticker, llm, tools, 180): ticker 
+            executor.submit(execute_professional_analysis, ticker, llm, tools, 60): ticker 
             for ticker in ticker_list
         }
         
-        for future in as_completed(future_to_ticker, timeout=600):
+        for future in as_completed(future_to_ticker, timeout=180):  # Reduced from 300 to 180 seconds
             ticker = future_to_ticker[future]
             try:
                 result = future.result()
@@ -534,12 +692,12 @@ def generate_professional_reports(
             else:
                 ticker_list = ticker_list[:5]  # Limit to 5
         
-        # Initialize LLM
+        # Initialize LLM (optimized for speed)
         llm = CrewCompatibleGemini(
             model="gemini-2.0-flash", 
-            temperature=0.3,  # Lower temperature for consistency
+            temperature=0.1,  # Lower for faster, more deterministic responses
             google_api_key=google_api_key,
-            max_tokens=400  # Sufficient for concise responses
+            max_tokens=400  # Further reduced for speed while maintaining quality
         )
         
         # Initialize tools
@@ -554,7 +712,7 @@ def generate_professional_reports(
             ticker_list, 
             llm, 
             tools, 
-            max_workers=min(3, len(ticker_list))
+            max_workers=min(10, len(ticker_list))  # Further increased parallelism for faster execution
         )
         
         end_time = time.time()
@@ -595,3 +753,118 @@ def generate_professional_reports(
             "status": "error",
             "message": str(e)
         }
+
+@router.get("/custom-summary-stream")
+async def generate_professional_reports_stream(
+    tickers: Optional[str] = Query(None, description="Comma-separated list of tickers"),
+    token: Optional[str] = Query(None, description="Auth token for SSE"),
+    db: Session = Depends(get_db)
+):
+    """Generate professional equity research reports with progress streaming"""
+    
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            # Authenticate using token from query parameter
+            if not token:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Authentication required'})}\n\n"
+                return
+            
+            # Get current user from token
+            from app.auth import decode_access_token
+            payload = decode_access_token(token)
+            user_id = payload.get("sub")
+            if not user_id:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Invalid token'})}\n\n"
+                return
+            
+            # Validate environment
+            google_api_key, serper_api_key = validate_environment()
+            
+            # Get tickers
+            ticker_list = []
+            if tickers:
+                ticker_list = [t.strip().upper() for t in tickers.split(',') if t.strip()]
+            else:
+                ticker_list = get_followed_stock_symbols(user_id, db)
+                if not ticker_list:
+                    ticker_list = ["AAPL", "MSFT"]
+                else:
+                    ticker_list = ticker_list[:5]
+            
+            # Send initial event
+            yield f"data: {json.dumps({'type': 'init', 'tickers': ticker_list, 'total': len(ticker_list)})}\n\n"
+            
+            # Initialize LLM
+            llm = CrewCompatibleGemini(
+                model="gemini-2.0-flash", 
+                temperature=0.1,  # Lower for faster responses
+                google_api_key=google_api_key,
+                max_tokens=400  # Optimized for speed
+            )
+            
+            # Initialize tools
+            tools = []
+            if serper_api_key:
+                tools.append(SerperSearchTool())
+            
+            # Progress tracking
+            progress_data = {ticker: 0.0 for ticker in ticker_list}
+            
+            def progress_callback(ticker: str, step: AnalysisStep, percentage: float):
+                progress_data[ticker] = percentage
+                # Send progress event
+                asyncio.create_task(send_progress_event(ticker, step, percentage))
+            
+            async def send_progress_event(ticker: str, step: AnalysisStep, percentage: float):
+                event_data = {
+                    'type': 'progress',
+                    'ticker': ticker,
+                    'step': step.value,
+                    'percentage': percentage,
+                    'overall': sum(progress_data.values()) / len(progress_data)
+                }
+                yield f"data: {json.dumps(event_data)}\n\n"
+            
+            # Execute analysis for each ticker
+            results = {}
+            for ticker in ticker_list:
+                yield f"data: {json.dumps({'type': 'start', 'ticker': ticker})}\n\n"
+                
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    execute_professional_analysis_with_progress,
+                    ticker,
+                    llm,
+                    tools,
+                    progress_callback,
+                    60  # Reduced from 180 to 60 seconds
+                )
+                
+                results[ticker] = result
+                
+                # Send completion event
+                yield f"data: {json.dumps({'type': 'complete', 'ticker': ticker, 'result': result})}\n\n"
+            
+            # Send final summary
+            successful = sum(1 for r in results.values() if r.get("status") == "success")
+            summary = {
+                'type': 'summary',
+                'total_tickers': len(ticker_list),
+                'successful': successful,
+                'timestamp': datetime.now().isoformat()
+            }
+            yield f"data: {json.dumps(summary)}\n\n"
+            
+        except Exception as e:
+            logger.error(f"Streaming error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )

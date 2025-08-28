@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # Frontend Development with Hot Reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: quantinsight-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+      - CHOKIDAR_USEPOLLING=true  # For hot reload in Docker
+      - WATCHPACK_POLLING=true
+      - WDS_SOCKET_PORT=3000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules  # Prevent node_modules from being overwritten
+    networks:
+      - quantinsight-network
+    stdin_open: true
+    tty: true
+    command: npm start
+
+  # Backend Development with Hot Reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: quantinsight-backend-dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:password@postgres:5432/quantinsight
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+      - DEVELOPMENT=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - backend-uploads:/app/uploads
+      - backend-logs:/app/logs
+    networks:
+      - quantinsight-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: quantinsight-postgres-dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: quantinsight
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-dev:/var/lib/postgresql/data
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql  # Optional initialization script
+    networks:
+      - quantinsight-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: quantinsight-redis-dev
+    command: redis-server --appendonly yes --loglevel debug
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-dev:/data
+    networks:
+      - quantinsight-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PgAdmin for Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: quantinsight-pgadmin-dev
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@quantinsight.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - quantinsight-network
+
+  # Redis Commander for Redis Management
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: quantinsight-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - quantinsight-network
+
+  # Mailhog for Email Testing (Development)
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: quantinsight-mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+    networks:
+      - quantinsight-network
+
+# Development volumes
+volumes:
+  postgres-data-dev:
+    name: quantinsight-postgres-data-dev
+  redis-data-dev:
+    name: quantinsight-redis-data-dev
+  backend-uploads:
+    name: quantinsight-backend-uploads-dev
+  backend-logs:
+    name: quantinsight-backend-logs-dev
+
+# Network
+networks:
+  quantinsight-network:
+    name: quantinsight-network-dev
+    driver: bridge

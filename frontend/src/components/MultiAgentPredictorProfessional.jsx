@@ -99,22 +99,37 @@ const SectionSkeleton = ({ isDark }) => (
   </div>
 );
 
-// Enhanced key levels chips with icons
+// Enhanced key levels chips with micro-interactions
 const KeyLevelChip = ({ label, value, isDark }) => {
   const isSupport = label.toLowerCase().includes('support');
   const isResistance = label.toLowerCase().includes('resistance');
   const Icon = isSupport ? ArrowDownRight : isResistance ? ArrowUpRight : Minus;
   const color = isSupport ? 'green' : isResistance ? 'red' : 'blue';
   
+  // Determine chip colors based on type
+  const getChipColors = () => {
+    if (isSupport) {
+      return isDark 
+        ? 'bg-green-900/20 text-green-300 border-green-800/30 hover:bg-green-900/30 hover:border-green-700/40 hover:shadow-green-900/20'
+        : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100 hover:border-green-300 hover:shadow-green-200/50';
+    }
+    if (isResistance) {
+      return isDark
+        ? 'bg-red-900/20 text-red-300 border-red-800/30 hover:bg-red-900/30 hover:border-red-700/40 hover:shadow-red-900/20'
+        : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300 hover:shadow-red-200/50';
+    }
+    return isDark
+      ? 'bg-blue-900/20 text-blue-300 border-blue-800/30 hover:bg-blue-900/30 hover:border-blue-700/40 hover:shadow-blue-900/20'
+      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:border-blue-300 hover:shadow-blue-200/50';
+  };
+  
   return (
     <motion.span 
       initial={{ scale: 0.9, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium
-        ${isDark 
-          ? `bg-${color}-900/20 text-${color}-400 border border-${color}-800/30` 
-          : `bg-${color}-50 text-${color}-700 border border-${color}-200`
-        }`}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.15 }}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all cursor-default shadow-sm hover:shadow ${getChipColors()}`}
     >
       <Icon className="w-3 h-3" />
       <span className="font-semibold">{label}:</span>
@@ -123,9 +138,396 @@ const KeyLevelChip = ({ label, value, isDark }) => {
   );
 };
 
-// Enhanced section renderer with better typography
+// Helper function to get section-specific colors
+const getSectionColors = (sectionKey, isDark) => {
+  const colorMap = {
+    overview: { 
+      bullet: isDark ? 'bg-indigo-400' : 'bg-indigo-500',
+      accent: isDark ? 'bg-indigo-500' : 'bg-indigo-600',
+      bg: isDark ? 'bg-indigo-900/20' : 'bg-indigo-50',
+      text: isDark ? 'text-indigo-300' : 'text-indigo-700',
+      border: isDark ? 'border-indigo-800/30' : 'border-indigo-200'
+    },
+    market_analysis: {
+      bullet: isDark ? 'bg-blue-400' : 'bg-blue-500',
+      accent: isDark ? 'bg-blue-500' : 'bg-blue-600',
+      bg: isDark ? 'bg-blue-900/20' : 'bg-blue-50',
+      text: isDark ? 'text-blue-300' : 'text-blue-700',
+      border: isDark ? 'border-blue-800/30' : 'border-blue-200'
+    },
+    fundamental_analysis: {
+      bullet: isDark ? 'bg-emerald-400' : 'bg-emerald-500',
+      accent: isDark ? 'bg-emerald-500' : 'bg-emerald-600',
+      bg: isDark ? 'bg-emerald-900/20' : 'bg-emerald-50',
+      text: isDark ? 'text-emerald-300' : 'text-emerald-700',
+      border: isDark ? 'border-emerald-800/30' : 'border-emerald-200'
+    },
+    sentiment_snapshot: {
+      bullet: isDark ? 'bg-purple-400' : 'bg-purple-500',
+      accent: isDark ? 'bg-purple-500' : 'bg-purple-600',
+      bg: isDark ? 'bg-purple-900/20' : 'bg-purple-50',
+      text: isDark ? 'text-purple-300' : 'text-purple-700',
+      border: isDark ? 'border-purple-800/30' : 'border-purple-200'
+    },
+    risk_assessment: {
+      bullet: isDark ? 'bg-red-400' : 'bg-red-500',
+      accent: isDark ? 'bg-red-500' : 'bg-red-600',
+      bg: isDark ? 'bg-red-900/20' : 'bg-red-50',
+      text: isDark ? 'text-red-300' : 'text-red-700',
+      border: isDark ? 'border-red-800/30' : 'border-red-200'
+    },
+    strategy_note: {
+      bullet: isDark ? 'bg-amber-400' : 'bg-amber-500',
+      accent: isDark ? 'bg-amber-500' : 'bg-amber-600',
+      bg: isDark ? 'bg-amber-900/20' : 'bg-amber-50',
+      text: isDark ? 'text-amber-300' : 'text-amber-700',
+      border: isDark ? 'border-amber-800/30' : 'border-amber-200'
+    }
+  };
+  
+  return colorMap[sectionKey] || colorMap.overview;
+};
+
+// Enhanced markdown processing with sophisticated formatting
+const processMarkdownContent = (content, isDark, sectionKey = null) => {
+  if (!content || typeof content !== 'string') {
+    return <span className="text-sm italic opacity-60">Content not available</span>;
+  }
+
+  const colors = getSectionColors(sectionKey, isDark);
+  const lines = content.split('\n');
+  const elements = [];
+  let currentParagraph = [];
+  let inList = false;
+  let inBlockquote = false;
+  let inTable = false;
+  let tableRows = [];
+
+  const flushParagraph = () => {
+    if (currentParagraph.length > 0) {
+      const paragraphContent = currentParagraph.join(' ').trim();
+      if (paragraphContent) {
+        elements.push(
+          <motion.p
+            key={elements.length}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+          >
+            {highlightContent(paragraphContent, isDark)}
+          </motion.p>
+        );
+      }
+      currentParagraph = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (tableRows.length > 0) {
+      elements.push(renderTable(tableRows, isDark, sectionKey));
+      tableRows = [];
+      inTable = false;
+    }
+  };
+
+  lines.forEach((line, lineIndex) => {
+    const trimmedLine = line.trim();
+
+    // Empty line - flush current paragraph
+    if (!trimmedLine && !inList && !inBlockquote && !inTable) {
+      flushParagraph();
+      return;
+    }
+
+    // Headers with **text:**
+    if (trimmedLine.match(/^\*\*.*?\*\*:?/)) {
+      flushParagraph();
+      flushTable();
+      const headerMatch = trimmedLine.match(/^\*\*(.*?)\*\*:?\s*(.*)/);
+      if (headerMatch) {
+        const [, header, rest] = headerMatch;
+        elements.push(
+          <motion.div
+            key={`header-${lineIndex}`}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="mb-2 mt-4 first:mt-0"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-1 h-5 rounded-full ${colors.accent}`} />
+              <h4 className="text-[15px] font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+                {header}
+              </h4>
+            </div>
+            {rest && (
+              <p className={`text-sm leading-relaxed ml-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {highlightContent(rest, isDark)}
+              </p>
+            )}
+          </motion.div>
+        );
+        inList = false;
+      }
+      return;
+    }
+
+    // Block quotes
+    if (trimmedLine.startsWith('>')) {
+      flushParagraph();
+      flushTable();
+      const quoteContent = trimmedLine.substring(1).trim();
+      elements.push(
+        <motion.blockquote
+          key={`quote-${lineIndex}`}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className={`px-3 py-2 my-2 border-l-2 rounded-r ${
+            isDark 
+              ? 'bg-gray-800/40 border-gray-600' 
+              : 'bg-gray-50 border-gray-300'
+          }`}
+        >
+          <p className={`text-sm italic ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            {highlightContent(quoteContent, isDark)}
+          </p>
+        </motion.blockquote>
+      );
+      inBlockquote = true;
+      return;
+    }
+
+    // Tables (detect pipes)
+    if (trimmedLine.includes('|') && trimmedLine.split('|').length >= 3) {
+      if (!inTable) {
+        flushParagraph();
+        inTable = true;
+      }
+      tableRows.push(trimmedLine);
+      return;
+    } else if (inTable) {
+      flushTable();
+    }
+
+    // Bullet points
+    if (trimmedLine.startsWith('*') && !trimmedLine.startsWith('**') || trimmedLine.startsWith('•')) {
+      if (!inList) {
+        flushParagraph();
+        inList = true;
+        elements.push(<ul key={`list-${lineIndex}`} className="space-y-1 my-2" />);
+      }
+      
+      const bulletContent = trimmedLine.replace(/^[\*•]\s*/, '').trim();
+      const listElement = elements[elements.length - 1];
+      const newItem = (
+        <motion.li
+          key={`item-${lineIndex}`}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut", delay: 0.02 * lineIndex }}
+          className="flex items-start gap-2.5"
+        >
+          <span className={`w-1.5 h-1.5 rounded-full mt-2 flex-shrink-0 ${colors.bullet}`} />
+          <span className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            {highlightContent(bulletContent, isDark)}
+          </span>
+        </motion.li>
+      );
+
+      // Clone the list and add the new item
+      elements[elements.length - 1] = React.cloneElement(listElement, {
+        children: [...(listElement.props.children || []), newItem]
+      });
+      return;
+    } else if (inList && !trimmedLine.startsWith('*') && !trimmedLine.startsWith('•')) {
+      inList = false;
+    }
+
+    // Regular paragraph line
+    if (trimmedLine && !inTable) {
+      currentParagraph.push(trimmedLine);
+    }
+  });
+
+  // Flush any remaining content
+  flushParagraph();
+  flushTable();
+
+  return <div className="space-y-2">{elements}</div>;
+};
+
+// Process section-specific content
+const processSectionContent = (content, isDark, sectionKey = null) => {
+  if (Array.isArray(content)) {
+    return (
+      <div className="space-y-3">
+        {content.map((item, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut", delay: 0.05 * index }}
+          >
+            {processMarkdownContent(item, isDark, sectionKey)}
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
+  return processMarkdownContent(content, isDark, sectionKey);
+};
+
+// Enhanced content highlighting
+const highlightContent = (text, isDark) => {
+  if (!text) return text;
+
+  // Pattern for various numeric formats and code spans
+  const patterns = [
+    // Numbers with currency, percentages, multipliers
+    { regex: /(\$?\d+(?:,\d{3})*(?:\.\d+)?[BMK]?%?|\d+x|\d+bps|\d+-DMA|[QH]\d+'?\d*|FY\d+)/g, type: 'number' },
+    // Code spans with backticks
+    { regex: /`([^`]+)`/g, type: 'code' },
+  ];
+
+  let elements = [text];
+
+  patterns.forEach(({ regex, type }) => {
+    elements = elements.flatMap((element) => {
+      if (typeof element !== 'string') return element;
+
+      const parts = [];
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(element)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push(element.slice(lastIndex, match.index));
+        }
+
+        if (type === 'number') {
+          parts.push(
+            <span
+              key={`${type}-${match.index}`}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-medium ${
+                isDark
+                  ? 'bg-blue-900/20 text-blue-300 border border-blue-800/30'
+                  : 'bg-blue-50 text-blue-700 border border-blue-200'
+              }`}
+            >
+              {match[0]}
+            </span>
+          );
+        } else if (type === 'code') {
+          parts.push(
+            <span
+              key={`${type}-${match.index}`}
+              className={`inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-mono ${
+                isDark
+                  ? 'bg-gray-800 text-gray-300 border border-gray-700'
+                  : 'bg-gray-100 text-gray-700 border border-gray-300'
+              }`}
+            >
+              {match[1]}
+            </span>
+          );
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      if (lastIndex < element.length) {
+        parts.push(element.slice(lastIndex));
+      }
+
+      return parts;
+    });
+  });
+
+  return elements;
+};
+
+// Table renderer
+const renderTable = (rows, isDark, sectionKey) => {
+  const colors = getSectionColors(sectionKey, isDark);
+  const parsedRows = rows.map(row => 
+    row.split('|').map(cell => cell.trim()).filter(cell => cell)
+  );
+
+  if (parsedRows.length === 0) return null;
+
+  const isHeaderSeparator = (row) => 
+    row.every(cell => /^[-:\s]+$/.test(cell));
+
+  let headerIndex = parsedRows.findIndex((row, index) => 
+    index < parsedRows.length - 1 && isHeaderSeparator(parsedRows[index + 1])
+  );
+
+  if (headerIndex === -1) headerIndex = 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="my-3 overflow-x-auto"
+    >
+      <table className={`w-full text-xs ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+        <thead>
+          <tr className={`border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+            {parsedRows[headerIndex].map((cell, i) => (
+              <th
+                key={i}
+                className={`px-3 py-2 text-left font-semibold ${colors.text}`}
+              >
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {parsedRows.slice(headerIndex + 2).map((row, i) => (
+            <tr
+              key={i}
+              className={`border-b ${
+                isDark ? 'border-gray-800' : 'border-gray-100'
+              } ${
+                i % 2 === 0 
+                  ? isDark ? 'bg-gray-900/20' : 'bg-gray-50/50'
+                  : ''
+              }`}
+            >
+              {row.map((cell, j) => (
+                <td key={j} className="px-3 py-2">
+                  {highlightContent(cell, isDark)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </motion.div>
+  );
+};
+
+// Helper function to get current phase from progress percentage
+const getPhaseFromProgress = (progress) => {
+  if (progress < 0.05) return 'Initializing...';
+  if (progress < 0.25) return 'Gathering market data...';
+  if (progress < 0.45) return 'Analyzing technical indicators...';
+  if (progress < 0.65) return 'Evaluating fundamentals...';
+  if (progress < 0.80) return 'Processing news and sentiment...';
+  if (progress < 0.90) return 'Assessing risk factors...';
+  if (progress < 0.98) return 'Finalizing strategy synthesis...';
+  return progress === 1 ? 'Analysis complete!' : 'Completing analysis...';
+};
+
+// Enhanced section renderer with sophisticated styling
 const ReportSection = ({ section, content, keyLevels, isDark, index }) => {
   const Icon = section.icon;
+  const colors = getSectionColors(section.key, isDark);
+  const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   
   const renderContent = () => {
     if (!content) {
@@ -136,162 +538,172 @@ const ReportSection = ({ section, content, keyLevels, isDark, index }) => {
       );
     }
 
-    // Market Analysis - Technical bullets with enhanced styling
-    if (section.key === 'market_analysis' && Array.isArray(content)) {
-      return (
-        <div className="space-y-2">
-          {content.map((item, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`flex items-start gap-3 group`}
-            >
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
-                ${isDark 
-                  ? 'bg-blue-900/30 group-hover:bg-blue-900/50' 
-                  : 'bg-blue-100 group-hover:bg-blue-200'
-                } transition-colors`}
-              >
-                <ChevronRight className={`w-3.5 h-3.5 ${
-                  isDark ? 'text-blue-400' : 'text-blue-600'
-                }`} />
-              </div>
-              <span className={`text-sm leading-relaxed ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                {highlightNumbers(item, isDark)}
-              </span>
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    // Risk Assessment & Strategy - Styled bullets
-    if ((section.key === 'risk_assessment' || section.key === 'strategy_note') && Array.isArray(content)) {
-      return (
-        <div className="space-y-2">
-          {content.map((item, i) => (
-            <motion.div 
-              key={i}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="flex items-start gap-3"
-            >
-              <span className={`text-lg leading-none mt-0.5 
-                ${section.key === 'risk_assessment' 
-                  ? 'text-red-500' 
-                  : 'text-amber-500'
-                }`}>
-                •
-              </span>
-              <span className={`text-sm leading-relaxed flex-1 ${
-                isDark ? 'text-gray-300' : 'text-gray-700'
-              }`}>
-                {highlightNumbers(item, isDark)}
-              </span>
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-
-    // Overview - Enhanced with better spacing and key levels
-    if (section.key === 'overview') {
-      return (
-        <div className="space-y-3">
-          <p className={`text-sm leading-relaxed ${
-            isDark ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            {highlightNumbers(content, isDark)}
-          </p>
-          {keyLevels && Object.keys(keyLevels).length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-wrap gap-2 pt-2"
-            >
-              {Object.entries(keyLevels).slice(0, 4).map(([label, value]) => (
-                <KeyLevelChip key={label} label={label} value={value} isDark={isDark} />
-              ))}
-            </motion.div>
-          )}
-        </div>
-      );
-    }
-
-    // Default paragraph with enhanced typography
     return (
-      <p className={`text-sm leading-relaxed ${
-        isDark ? 'text-gray-300' : 'text-gray-700'
-      }`}>
-        {highlightNumbers(content, isDark)}
-      </p>
+      <div className={`${
+        isDark 
+          ? 'bg-gray-900/40 border-gray-700/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]' 
+          : 'bg-white/80 border-gray-200 shadow-sm'
+      } rounded-xl p-4 border backdrop-blur-sm`}>
+        {processSectionContent(content, isDark, section.key)}
+        
+        {/* Key levels for overview section */}
+        {section.key === 'overview' && keyLevels && Object.keys(keyLevels).length > 0 && (
+          <motion.div 
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="flex flex-wrap gap-2 pt-3 mt-3 border-t border-opacity-20 border-indigo-500/30"
+          >
+            {Object.entries(keyLevels).slice(0, 4).map(([label, value]) => (
+              <KeyLevelChip key={label} label={label} value={value} isDark={isDark} />
+            ))}
+          </motion.div>
+        )}
+      </div>
     );
   };
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldReduceMotion ? {} : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       className="relative group"
     >
-      <div className="flex items-start gap-3">
-        <div className={`p-2.5 rounded-xl bg-gradient-to-br ${
-          isDark ? section.gradient : section.lightGradient
-        } shadow-sm group-hover:shadow-md transition-all`}>
-          <Icon className={`w-5 h-5 ${
-            isDark ? 'text-white' : `text-${section.color}-600`
-          }`} />
+      <div className="space-y-4">
+        {/* Section Header */}
+        <div className="flex items-center gap-4">
+          <div className={`p-3 rounded-xl bg-gradient-to-br ${
+            isDark ? section.gradient : section.lightGradient
+          } shadow-sm group-hover:shadow-lg transition-all duration-300`}>
+            <Icon className={`w-5 h-5 ${
+              isDark ? 'text-white' : `text-${section.color}-600`
+            }`} />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100">
+              {section.title}
+            </h3>
+            <div className={`mt-1 h-px bg-gradient-to-r ${
+              isDark 
+                ? 'from-gray-600/50 to-transparent' 
+                : 'from-gray-300/70 to-transparent'
+            }`} />
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className={`text-base font-semibold mb-2 ${
-            isDark ? 'text-gray-100' : 'text-gray-900'
-          }`}>
-            {section.title}
-          </h3>
-          {renderContent()}
-        </div>
+        
+        {/* Content */}
+        {renderContent()}
       </div>
     </motion.div>
   );
 };
 
-// Helper to highlight numbers in text
-const highlightNumbers = (text, isDark) => {
-  if (!text) return text;
-  
-  // Pattern to match numbers with optional $ and %
-  const pattern = /(\$?\d+\.?\d*%?|\d+\.?\d*x|\d+bps|\d+-DMA|Q\d+|H\d+|FY\d+)/g;
-  
-  const parts = text.split(pattern);
-  
-  return parts.map((part, i) => {
-    if (part.match(pattern)) {
-      return (
-        <span key={i} className={`font-semibold ${
-          isDark ? 'text-blue-400' : 'text-blue-600'
-        }`}>
-          {part}
-        </span>
-      );
-    }
-    return part;
-  });
-};
-
-// Progress Tracker Component
-const ProgressTracker = ({ progress, isDark }) => {
+// Enhanced Progress Loader with improved animations
+const ProgressLoader = ({ progress = 0, isDark, currentPhase = 'Analyzing...' }) => {
   const percentage = Math.round(progress * 100);
+  const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="flex flex-col items-center justify-center py-8"
+    >
+      {/* Circular Progress */}
+      <div className="relative w-32 h-32 mb-6">
+        <svg className="w-32 h-32 transform -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke={isDark ? '#374151' : '#E5E7EB'}
+            strokeWidth="12"
+            fill="none"
+          />
+          <motion.circle
+            cx="64"
+            cy="64"
+            r="56"
+            stroke="url(#progressGradient)"
+            strokeWidth="12"
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 56}`}
+            initial={{ strokeDashoffset: 2 * Math.PI * 56 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 56 * (1 - progress) }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+          />
+          <defs>
+            <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#6366F1" />
+              <stop offset="50%" stopColor="#8B5CF6" />
+              <stop offset="100%" stopColor="#EC4899" />
+            </linearGradient>
+          </defs>
+        </svg>
+        
+        {/* Percentage Text */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <motion.span 
+            key={percentage}
+            initial={shouldReduceMotion ? {} : { opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`text-3xl font-bold ${
+              isDark ? 'text-gray-100' : 'text-gray-900'
+            }`}
+          >
+            {percentage}%
+          </motion.span>
+        </div>
+      </div>
+      
+      {/* Status Text */}
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`text-sm font-medium mb-2 ${
+          isDark ? 'text-gray-300' : 'text-gray-700'
+        }`}
+      >
+        Analyzing Market Data
+      </motion.p>
+      
+      {/* Current Section */}
+      <motion.p 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`text-xs ${
+          isDark ? 'text-gray-500' : 'text-gray-500'
+        }`}
+      >
+        {currentPhase}
+      </motion.p>
+      
+      {/* Linear Progress Bar */}
+      <div className={`w-full max-w-xs mt-6 h-1.5 rounded-full overflow-hidden ${
+        isDark ? 'bg-gray-700' : 'bg-gray-200'
+      }`}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${percentage}%` }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+        />
+      </div>
+    </motion.div>
+  );
+};
+
+// Progress Tracker Component with refined styling
+const ProgressTracker = ({ progress, isDark }) => {
+  const percentage = Math.round(progress * 100);
+  const shouldReduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  
+  return (
+    <motion.div 
+      initial={shouldReduceMotion ? {} : { opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="mb-4"
     >
@@ -333,7 +745,7 @@ const ProgressTracker = ({ progress, isDark }) => {
           return (
             <motion.div
               key={section.key}
-              initial={{ opacity: 0, y: 10 }}
+              initial={shouldReduceMotion ? {} : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
               className={`flex items-center gap-1.5 text-xs ${
@@ -362,8 +774,8 @@ const ProgressTracker = ({ progress, isDark }) => {
   );
 };
 
-// Enhanced ticker report card
-const TickerReportCard = ({ ticker, report, isLoading, onRerun, onCopy, onExport, isDark, analysisProgress = 0 }) => {
+// Enhanced ticker report card with sophisticated design
+const TickerReportCard = ({ ticker, report, isLoading, onRerun, onCancel, onCopy, onExport, isDark, analysisProgress = 0 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -444,18 +856,22 @@ const TickerReportCard = ({ ticker, report, isLoading, onRerun, onCopy, onExport
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       className={`${isDark 
-        ? 'bg-gradient-to-br from-gray-800 to-gray-850 border-gray-700' 
-        : 'bg-white border-gray-200'
-      } rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all`}
+        ? 'bg-gradient-to-br from-gray-800/95 via-gray-900/90 to-gray-800/95 border-gray-700/50 shadow-2xl' 
+        : 'bg-gradient-to-br from-white via-gray-50/50 to-white border-gray-200/60 shadow-xl'
+      } rounded-2xl border backdrop-blur-sm overflow-hidden hover:shadow-2xl hover:scale-[1.01] transition-all duration-500`}
     >
-      {/* Header with gradient accent */}
-      <div className={`relative px-6 py-5 border-b ${
-        isDark ? 'border-gray-700' : 'border-gray-100'
+      {/* Enhanced Header with sophisticated gradient */}
+      <div className={`relative px-6 py-6 border-b ${
+        isDark ? 'border-gray-700/50' : 'border-gray-100'
       }`}>
-        <div className={`absolute inset-0 bg-gradient-to-r ${
+        <div className={`absolute inset-0 bg-gradient-to-br ${
           isDark 
-            ? 'from-indigo-900/20 via-purple-900/20 to-pink-900/20' 
-            : 'from-indigo-50 via-purple-50 to-pink-50'
+            ? 'from-indigo-900/10 via-purple-900/10 via-pink-900/10 to-transparent' 
+            : 'from-indigo-50/80 via-purple-50/60 via-pink-50/40 to-transparent'
+        }`} />
+        {/* Subtle pattern overlay */}
+        <div className={`absolute inset-0 opacity-30 ${
+          isDark ? 'bg-[radial-gradient(circle_at_50%_120%,rgba(99,102,241,0.1),transparent)]' : 'bg-[radial-gradient(circle_at_50%_120%,rgba(99,102,241,0.05),transparent)]'
         }`} />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -538,18 +954,76 @@ const TickerReportCard = ({ ticker, report, isLoading, onRerun, onCopy, onExport
         </div>
       </div>
 
-      {/* Content with better spacing */}
-      <div className="p-6">
-        {isLoading ? (
-          <>
-            <ProgressTracker progress={analysisProgress} isDark={isDark} />
-            <SectionSkeleton isDark={isDark} />
-          </>
-        ) : report?.prediction?.sections ? (
-          <div className="space-y-6">
+      {/* Content with sophisticated spacing and layout */}
+      <div className="p-8">
+        {(() => {
+          if (isLoading) {
+            return (
+              <div>
+                <ProgressLoader 
+                  progress={analysisProgress || 0} 
+                  isDark={isDark} 
+                  currentPhase={getPhaseFromProgress(analysisProgress || 0)}
+                />
+                <div className="flex justify-center mt-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => onCancel(ticker)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isDark 
+                        ? 'bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800/50' 
+                        : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    Cancel Analysis
+                  </motion.button>
+                </div>
+              </div>
+            );
+          } 
+          
+          // Try different possible data structures
+          let sections = null;
+          let meta = null;
+          
+          if (report?.prediction?.sections) {
+            sections = report.prediction.sections;
+            meta = report.prediction.meta;
+          } else if (report?.sections) {
+            sections = report.sections;
+            meta = report.meta;
+          } else if (report?.prediction && typeof report.prediction === 'object') {
+            // Backend returns flat prediction object, map to expected sections structure
+            sections = {
+              overview: report.prediction.market_analysis || 'Analysis data not available',
+              market_analysis: [report.prediction.market_analysis || 'Technical analysis not available'],
+              fundamental_analysis: report.prediction.fundamental_analysis || 'Fundamental analysis not available',
+              sentiment_snapshot: report.prediction.sentiment_analysis || 'Sentiment analysis not available',
+              risk_assessment: [report.prediction.risk_assessment || 'Risk assessment not available'],
+              strategy_note: [report.prediction.investment_strategy || 'Investment strategy not available']
+            };
+            meta = {
+              generated_at: report.prediction.timestamp,
+              key_levels: {}
+            };
+          } else if (typeof report === 'string') {
+            // If it's just a string, treat it as overview
+            sections = {
+              overview: report,
+              market_analysis: [],
+              fundamental_analysis: '',
+              sentiment_snapshot: '',
+              risk_assessment: [],
+              strategy_note: []
+            };
+          }
+          
+          if (sections) {
+            return <div className="space-y-6">
             {SECTIONS.map((section, index) => {
-              const content = report.prediction.sections[section.key];
-              const keyLevels = section.key === 'overview' ? report.prediction.meta?.key_levels : null;
+              const content = sections[section.key];
+              const keyLevels = section.key === 'overview' ? meta?.key_levels : null;
               
               return (
                 <div key={section.key}>
@@ -561,27 +1035,37 @@ const TickerReportCard = ({ ticker, report, isLoading, onRerun, onCopy, onExport
                     index={index}
                   />
                   {index < SECTIONS.length - 1 && (
-                    <div className={`mt-6 border-b ${
-                      isDark ? 'border-gray-700/30' : 'border-gray-100'
-                    }`} />
+                    <div className="mt-8 mb-2 relative">
+                      <div className={`h-px bg-gradient-to-r ${
+                        isDark 
+                          ? 'from-transparent via-gray-600/40 to-transparent' 
+                          : 'from-transparent via-gray-300/60 to-transparent'
+                      }`} />
+                      <div className={`absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ${
+                        isDark ? 'bg-gray-600' : 'bg-gray-300'
+                      }`} />
+                    </div>
                   )}
                 </div>
               );
             })}
-          </div>
-        ) : (
-          <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-base font-medium">Analysis Temporarily Unavailable</p>
-            <p className="text-sm mt-1 opacity-75">Please try again in a moment</p>
-          </div>
-        )}
+          </div>;
+          } else {
+            return (
+              <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-base font-medium">Analysis Temporarily Unavailable</p>
+                <p className="text-sm mt-1 opacity-75">Please try again in a moment</p>
+              </div>
+            );
+          }
+        })()}
       </div>
     </motion.div>
   );
 };
 
-// Main component with enhanced UI
+// Main component
 const MultiAgentPredictorProfessional = () => {
   const { isDark } = useTheme();
   const [availableTickers, setAvailableTickers] = useState([]);
@@ -596,6 +1080,10 @@ const MultiAgentPredictorProfessional = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState({});
+  const [globalProgress, setGlobalProgress] = useState(0);
+  const [currentPhase, setCurrentPhase] = useState('');
+  const [completedTickers, setCompletedTickers] = useState(new Set());
+  const [analysisControllers, setAnalysisControllers] = useState({}); // Store AbortControllers for cancellation
   const searchInputRef = useRef(null);
   const dropdownRef = useRef(null);
 
@@ -701,11 +1189,16 @@ const MultiAgentPredictorProfessional = () => {
   const runAnalysis = async () => {
     if (selectedTickers.length === 0) return;
 
+    console.log('Starting analysis for:', selectedTickers);
     setLoading(true);
     setError(null);
     setReports({});
     setLoadingTickers({});
     setAnalysisProgress({});
+    setGlobalProgress(0);
+    setCurrentPhase('');
+    setCompletedTickers(new Set());
+    setAnalysisControllers({});
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -714,107 +1207,198 @@ const MultiAgentPredictorProfessional = () => {
       return;
     }
 
-    let progressInterval;
-    
     try {
-      // Only set loading state for tickers we're analyzing
+      // Set loading state for all tickers
       const tickersToAnalyze = selectedTickers.slice();
       const loadingState = {};
       const progressState = {};
+      const controllers = {};
+      
       tickersToAnalyze.forEach(ticker => {
         loadingState[ticker] = true;
         progressState[ticker] = 0;
+        controllers[ticker] = new AbortController(); // Create abort controller for each ticker
       });
+      
+      console.log('Setting loading states:', loadingState);
       setLoadingTickers(loadingState);
       setAnalysisProgress(progressState);
+      setAnalysisControllers(controllers);
       
-      // Simulate progress updates
-      progressInterval = setInterval(() => {
+      // More accurate progress tracking based on API phases
+      const analysisPhases = [
+        { name: 'Initializing', duration: 2000, progress: 0.05 },
+        { name: 'Gathering market data', duration: 8000, progress: 0.25 },
+        { name: 'Technical analysis', duration: 12000, progress: 0.45 },
+        { name: 'Fundamental analysis', duration: 12000, progress: 0.65 },
+        { name: 'Sentiment analysis', duration: 8000, progress: 0.80 },
+        { name: 'Risk assessment', duration: 6000, progress: 0.90 },
+        { name: 'Strategy synthesis', duration: 7000, progress: 0.98 }
+      ];
+      
+      const totalEstimatedTime = analysisPhases.reduce((sum, phase) => sum + phase.duration, 0);
+      const startTime = Date.now();
+      let currentPhaseIndex = 0;
+      let phaseStartTime = startTime;
+      
+      // More realistic progress simulation
+      const progressInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const currentPhase = analysisPhases[currentPhaseIndex];
+        
+        if (!currentPhase) {
+          clearInterval(progressInterval);
+          return;
+        }
+        
+        const phaseElapsed = Date.now() - phaseStartTime;
+        const phaseProgress = Math.min(phaseElapsed / currentPhase.duration, 1);
+        
+        // Calculate current progress based on completed phases + current phase progress
+        let totalProgress = 0;
+        for (let i = 0; i < currentPhaseIndex; i++) {
+          totalProgress += (analysisPhases[i].progress - (i > 0 ? analysisPhases[i - 1].progress : 0));
+        }
+        
+        const currentPhaseWeight = currentPhase.progress - (currentPhaseIndex > 0 ? analysisPhases[currentPhaseIndex - 1].progress : 0);
+        totalProgress += currentPhaseWeight * phaseProgress;
+        
+        // Move to next phase when current phase is complete
+        if (phaseProgress >= 1 && currentPhaseIndex < analysisPhases.length - 1) {
+          currentPhaseIndex++;
+          phaseStartTime = Date.now();
+        }
+        
+        // Update individual ticker progress
         setAnalysisProgress(prev => {
           const newProgress = {};
           Object.keys(prev).forEach(ticker => {
-            if (prev[ticker] < 0.95) {
-              newProgress[ticker] = Math.min(prev[ticker] + 0.15, 0.95);
+            if (prev[ticker] < 1) {
+              newProgress[ticker] = Math.min(totalProgress, 0.98); // Cap at 98% until API completes
             } else {
               newProgress[ticker] = prev[ticker];
             }
           });
           return newProgress;
         });
-      }, 2000);
+        
+        // Update global progress and current phase
+        setGlobalProgress(Math.min(totalProgress, 0.98));
+        setCurrentPhase(currentPhase.name);
+        
+      }, 50); // Update every 50ms for smoother animation
 
-      // API call
+      // API call with abort signal for cancellation
       const response = await axios.get(`http://localhost:8000/news/custom-summary`, {
         params: { tickers: tickersToAnalyze.join(',') },
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        timeout: 600000
+        timeout: 300000, // Reduced timeout to 5 minutes
+        signal: controllers[tickersToAnalyze[0]]?.signal // Use first ticker's controller for the entire request
       });
+      
+      clearInterval(progressInterval);
+      
+      console.log('API Response:', response.data);
       
       if (response.data && response.data.reports) {
         const tickerList = Object.keys(response.data.reports);
         
-        // Update loading states to only include returned tickers
-        const actualLoadingState = {};
+        // Immediately complete progress for all tickers and global progress
+        const completeProgress = {};
         tickerList.forEach(ticker => {
-          actualLoadingState[ticker] = true;
+          completeProgress[ticker] = 1;
         });
-        setLoadingTickers(actualLoadingState);
+        setAnalysisProgress(completeProgress);
+        setGlobalProgress(1);
+        setCompletedTickers(new Set(tickerList));
         
-        // Stream results
+        // Set reports with visual feedback
         for (let i = 0; i < tickerList.length; i++) {
           const ticker = tickerList[i];
-          await new Promise(resolve => setTimeout(resolve, 300));
           
+          const reportData = response.data.reports[ticker];
+          console.log(`Setting report for ${ticker}:`, reportData);
+          console.log(`Report structure - has prediction? ${!!reportData?.prediction}, has sections? ${!!reportData?.prediction?.sections}`);
+          
+          // Set report immediately (no artificial delay)
           setReports(prev => ({
             ...prev,
-            [ticker]: response.data.reports[ticker]
+            [ticker]: reportData
           }));
           
+          // Remove loading state immediately
           setLoadingTickers(prev => ({
             ...prev,
             [ticker]: false
           }));
-          
-          // Set progress to 100% for completed ticker
-          setAnalysisProgress(prev => ({
-            ...prev,
-            [ticker]: 1
-          }));
         }
         
-        clearInterval(progressInterval);
         setLastRunTime(new Date());
       } else {
-        clearInterval(progressInterval);
         setError("Analysis returned no results");
       }
     } catch (err) {
       console.error('Analysis error:', err);
-      setError("Analysis temporarily unavailable");
-      clearInterval(progressInterval);
+      if (err.name === 'AbortError') {
+        setError("Analysis was cancelled");
+      } else {
+        setError("Analysis temporarily unavailable");
+      }
     } finally {
       setLoading(false);
       setLoadingTickers({});
-      // Keep progress at 100% for completed tickers
+      setAnalysisControllers({});
     }
+  };
+
+  // Cancel individual ticker analysis
+  const handleCancelTicker = (ticker) => {
+    const controller = analysisControllers[ticker];
+    if (controller) {
+      controller.abort();
+      setLoadingTickers(prev => ({ ...prev, [ticker]: false }));
+      setAnalysisProgress(prev => ({ ...prev, [ticker]: 0 }));
+      setAnalysisControllers(prev => {
+        const { [ticker]: removed, ...rest } = prev;
+        return rest;
+      });
+    }
+  };
+
+  // Cancel all analysis
+  const handleCancelAll = () => {
+    Object.values(analysisControllers).forEach(controller => {
+      controller.abort();
+    });
+    setLoading(false);
+    setLoadingTickers({});
+    setAnalysisProgress({});
+    setGlobalProgress(0);
+    setCurrentPhase('');
+    setAnalysisControllers({});
+    setError("Analysis cancelled by user");
   };
 
   const handleRerun = async (ticker) => {
     setLoadingTickers(prev => ({ ...prev, [ticker]: true }));
     setAnalysisProgress(prev => ({ ...prev, [ticker]: 0 }));
     
-    // Simulate progress
+    // Continuous progress for rerun (reduced timing)
+    const estimatedTime = 45000; // Reduced to 45 seconds
+    const startTime = Date.now();
+    
     const progressInterval = setInterval(() => {
-      setAnalysisProgress(prev => {
-        if (prev[ticker] < 0.95) {
-          return { ...prev, [ticker]: Math.min(prev[ticker] + 0.2, 0.95) };
-        }
-        return prev;
-      });
-    }, 1500);
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / estimatedTime, 0.99); // Cap at 99%
+      
+      setAnalysisProgress(prev => ({ 
+        ...prev, 
+        [ticker]: prev[ticker] < 1 ? progress : prev[ticker]
+      }));
+    }, 100); // Update every 100ms
     
     const token = localStorage.getItem('token');
     try {
@@ -826,6 +1410,8 @@ const MultiAgentPredictorProfessional = () => {
         }
       });
       
+      clearInterval(progressInterval);
+      
       if (response.data?.reports?.[ticker]) {
         setReports(prev => ({
           ...prev,
@@ -833,7 +1419,6 @@ const MultiAgentPredictorProfessional = () => {
         }));
         setAnalysisProgress(prev => ({ ...prev, [ticker]: 1 }));
       }
-      clearInterval(progressInterval);
     } catch (err) {
       console.error('Rerun error:', err);
       clearInterval(progressInterval);
@@ -874,44 +1459,139 @@ const MultiAgentPredictorProfessional = () => {
           </p>
         </motion.div>
 
-        {/* Analysis Summary */}
-        {(lastRunTime || Object.keys(reports).length > 0) && (
+        {/* Analysis Summary with Global Progress */}
+        {(lastRunTime || Object.keys(reports).length > 0 || loading) && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className={`${isDark 
               ? 'bg-gray-800/50 border-gray-700 backdrop-blur-sm' 
               : 'bg-white/70 border-gray-200 backdrop-blur-sm'
-            } rounded-xl px-5 py-4 border flex items-center justify-between shadow-sm`}
+            } rounded-xl px-5 py-4 border shadow-sm`}
           >
-            <div className="flex items-center gap-8">
-              <div>
-                <p className={`text-xs font-medium ${
-                  isDark ? 'text-gray-500' : 'text-gray-500'
-                }`}>
-                  Reports Generated
-                </p>
-                <p className={`text-2xl font-bold font-mono mt-1 ${
-                  isDark ? 'text-gray-100' : 'text-gray-900'
-                }`}>
-                  {Object.keys(reports).length}
-                </p>
-              </div>
-              {lastRunTime && (
-                <div>
-                  <p className={`text-xs font-medium ${
-                    isDark ? 'text-gray-500' : 'text-gray-500'
+            {loading && Object.keys(analysisProgress).length > 0 ? (
+              <div className="w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className={`text-sm font-semibold ${
+                    isDark ? 'text-gray-200' : 'text-gray-800'
                   }`}>
-                    Last Analysis
-                  </p>
-                  <p className={`text-sm font-semibold mt-1 ${
-                    isDark ? 'text-gray-300' : 'text-gray-700'
+                    Analyzing {Object.keys(analysisProgress).length} ticker{Object.keys(analysisProgress).length > 1 ? 's' : ''}
+                  </h3>
+                  <span className={`text-2xl font-bold ${
+                    isDark ? 'text-indigo-400' : 'text-indigo-600'
                   }`}>
-                    {lastRunTime.toLocaleTimeString()}
-                  </p>
+                    {Math.round(globalProgress * 100)}%
+                  </span>
                 </div>
-              )}
-            </div>
+
+                {/* Global Progress Bar */}
+                <div className="mb-4">
+                  <div className={`w-full h-3 rounded-full overflow-hidden ${
+                    isDark ? 'bg-gray-700/50' : 'bg-gray-200'
+                  }`}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${globalProgress * 100}%` }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className={`h-full rounded-full ${
+                        globalProgress === 1 
+                          ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                          : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Individual Stock Progress */}
+                <div className="mb-3">
+                  <h4 className={`text-xs font-medium mb-2 ${
+                    isDark ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Individual Progress
+                  </h4>
+                </div>
+                
+                {/* Individual Ticker Progress */}
+                <div className="space-y-1">
+                  {Object.entries(analysisProgress).map(([ticker, progress]) => (
+                    <div key={ticker} className="flex items-center gap-2">
+                      <span className={`text-xs font-mono w-12 ${
+                        isDark ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {ticker}
+                      </span>
+                      <div className={`flex-1 h-1 rounded-full overflow-hidden ${
+                        isDark ? 'bg-gray-700/50' : 'bg-gray-300/50'
+                      }`}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progress * 100}%` }}
+                          className={`h-full rounded-full ${
+                            progress === 1 
+                              ? 'bg-green-500' 
+                              : 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                          }`}
+                        />
+                      </div>
+                      <span className={`text-xs font-medium w-10 text-right ${
+                        progress === 1 
+                          ? isDark ? 'text-green-400' : 'text-green-600'
+                          : isDark ? 'text-gray-500' : 'text-gray-600'
+                      }`}>
+                        {Math.round(progress * 100)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Cancel All Button */}
+                <div className="mt-4">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleCancelAll}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isDark 
+                        ? 'bg-red-900/30 hover:bg-red-900/50 text-red-400 border border-red-800/50' 
+                        : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                    }`}
+                  >
+                    Cancel All Analysis
+                  </motion.button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-8">
+                  <div>
+                    <p className={`text-xs font-medium ${
+                      isDark ? 'text-gray-500' : 'text-gray-500'
+                    }`}>
+                      Reports Generated
+                    </p>
+                    <p className={`text-2xl font-bold font-mono mt-1 ${
+                      isDark ? 'text-gray-100' : 'text-gray-900'
+                    }`}>
+                      {Object.keys(reports).length}
+                    </p>
+                  </div>
+                  {lastRunTime && (
+                    <div>
+                      <p className={`text-xs font-medium ${
+                        isDark ? 'text-gray-500' : 'text-gray-500'
+                      }`}>
+                        Last Analysis
+                      </p>
+                      <p className={`text-sm font-semibold mt-1 ${
+                        isDark ? 'text-gray-300' : 'text-gray-700'
+                      }`}>
+                        {lastRunTime.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1168,6 +1848,7 @@ const MultiAgentPredictorProfessional = () => {
             {selectedTickers.map(ticker => {
               const report = reports[ticker];
               const isLoading = loadingTickers[ticker];
+              const tickerProgress = analysisProgress[ticker] || 0;
 
               if (!report && !isLoading) return null;
 
@@ -1177,8 +1858,9 @@ const MultiAgentPredictorProfessional = () => {
                   ticker={ticker}
                   report={report}
                   isLoading={isLoading}
-                  analysisProgress={analysisProgress[ticker] || 0}
+                  analysisProgress={tickerProgress}
                   onRerun={handleRerun}
+                  onCancel={handleCancelTicker}
                   onCopy={handleCopy}
                   onExport={handleExport}
                   isDark={isDark}

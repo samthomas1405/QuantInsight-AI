@@ -51,3 +51,29 @@ yarn-error.log*
 # === General ===
 *.log
 *.sqlite
+
+# === Docker ===
+# Docker override files
+docker-compose.override.yml
+
+# Docker volumes (if mounted locally)
+postgres-data/
+redis-data/
+uploads/
+logs/
+
+# === Additional Files ===
+# Database dumps
+*.sql
+dump.rdb
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+
+# Security files
+*.pem
+*.key
+*.cert
+*.crt
