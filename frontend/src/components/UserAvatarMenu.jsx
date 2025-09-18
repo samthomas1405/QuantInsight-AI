@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const UserAvatarMenu = ({ firstName, lastName, email }) => {
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
   const navigate = useNavigate();
   const { isDark } = useTheme();
+  const { logout } = useAuth();
 
   const initials = firstName && lastName
   ? `${firstName[0]}${lastName[0]}`.toUpperCase()
@@ -19,8 +21,10 @@ const UserAvatarMenu = ({ firstName, lastName, email }) => {
   const closeMenu = () => setOpen(false);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/login');
+    // Clear selected stocks from multi-agent predictor
+    localStorage.removeItem('multiAgentSelectedTickers');
+    // Use auth context logout
+    logout();
   };
 
   useEffect(() => {
@@ -75,13 +79,14 @@ const UserAvatarMenu = ({ firstName, lastName, email }) => {
               </div>
             </div>
 
+            
             {/* Professional Menu Options */}
             <div className="py-2">
               <motion.button
                 whileHover={{ backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  alert('Profile option (not implemented)');
+                  navigate('/dashboard/profile');
                   closeMenu();
                 }}
                 className={`w-full flex items-center px-6 py-3 text-sm transition-all duration-200 group ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}

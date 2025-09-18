@@ -41,9 +41,46 @@ def remove_stock_from_user(symbol: str, db: Session = Depends(get_db), current_u
 @router.get("/search")
 def search_stocks(q: str, db: Session = Depends(get_db)):
     q = q.strip()
-    results = db.query(Stock).filter(
-        (Stock.symbol.ilike(f"{q}%")) | (Stock.name.ilike(f"{q}%"))
-    ).limit(20).all()
+    
+    if not q:
+        return []
+    
+    # First try to search in database - ONLY stocks that START with query
+    # Order by: symbol matches first, then name matches
+    symbol_results = db.query(Stock).filter(
+        Stock.symbol.ilike(f"{q}%")
+    ).all()
+    
+    name_results = db.query(Stock).filter(
+        Stock.name.ilike(f"{q}%")
+    ).all()
+    
+    # Combine results, avoiding duplicates
+    results = symbol_results + [stock for stock in name_results if stock not in symbol_results]
+    results = results[:20]  # Limit to 20 results
+    
+    # If no results from database, search in TOP_STOCKS
+    if not results:
+        q_upper = q.upper()
+        
+        # Filter TOP_STOCKS - First symbol matches, then company name matches
+        symbol_matches = []
+        name_matches = []
+        
+        for stock in TOP_STOCKS:
+            # Check if symbol starts with query
+            if stock["symbol"].upper().startswith(q_upper):
+                symbol_matches.append(stock)
+            # Check if company name starts with query
+            elif stock["name"].upper().startswith(q_upper):
+                name_matches.append(stock)
+        
+        # Combine results: symbol matches first, then name matches
+        filtered_stocks = symbol_matches + name_matches
+        
+        # Convert to proper format for response
+        results = filtered_stocks[:20]  # Limit to 20 results
+    
     return results
 
 TOP_STOCKS = [
@@ -57,6 +94,56 @@ TOP_STOCKS = [
     {"symbol": "JPM", "name": "JPMorgan Chase & Co."},
     {"symbol": "BRK.B", "name": "Berkshire Hathaway Inc."},
     {"symbol": "NFLX", "name": "Netflix Inc."},
+    {"symbol": "DIS", "name": "Walt Disney Company"},
+    {"symbol": "V", "name": "Visa Inc."},
+    {"symbol": "MA", "name": "Mastercard Inc."},
+    {"symbol": "JNJ", "name": "Johnson & Johnson"},
+    {"symbol": "WMT", "name": "Walmart Inc."},
+    {"symbol": "PG", "name": "Procter & Gamble Co."},
+    {"symbol": "HD", "name": "Home Depot Inc."},
+    {"symbol": "BAC", "name": "Bank of America Corp."},
+    {"symbol": "ADBE", "name": "Adobe Inc."},
+    {"symbol": "CRM", "name": "Salesforce Inc."},
+    {"symbol": "PFE", "name": "Pfizer Inc."},
+    {"symbol": "CSCO", "name": "Cisco Systems Inc."},
+    {"symbol": "INTC", "name": "Intel Corporation"},
+    {"symbol": "AMD", "name": "Advanced Micro Devices Inc."},
+    {"symbol": "ORCL", "name": "Oracle Corporation"},
+    {"symbol": "IBM", "name": "International Business Machines"},
+    {"symbol": "GS", "name": "Goldman Sachs Group Inc."},
+    {"symbol": "MS", "name": "Morgan Stanley"},
+    {"symbol": "PYPL", "name": "PayPal Holdings Inc."},
+    {"symbol": "SNAP", "name": "Snap Inc."},
+    {"symbol": "SQ", "name": "Block Inc."},
+    {"symbol": "SPOT", "name": "Spotify Technology"},
+    {"symbol": "UBER", "name": "Uber Technologies Inc."},
+    {"symbol": "LYFT", "name": "Lyft Inc."},
+    {"symbol": "ZM", "name": "Zoom Video Communications"},
+    {"symbol": "DOCU", "name": "DocuSign Inc."},
+    {"symbol": "SHOP", "name": "Shopify Inc."},
+    {"symbol": "RBLX", "name": "Roblox Corporation"},
+    {"symbol": "COIN", "name": "Coinbase Global Inc."},
+    {"symbol": "PLTR", "name": "Palantir Technologies Inc."},
+    {"symbol": "SNOW", "name": "Snowflake Inc."},
+    {"symbol": "DDOG", "name": "Datadog Inc."},
+    {"symbol": "ABNB", "name": "Airbnb Inc."},
+    {"symbol": "DASH", "name": "DoorDash Inc."},
+    {"symbol": "ROKU", "name": "Roku Inc."},
+    {"symbol": "PINS", "name": "Pinterest Inc."},
+    {"symbol": "TWTR", "name": "Twitter Inc."},
+    {"symbol": "HOOD", "name": "Robinhood Markets Inc."},
+    {"symbol": "GME", "name": "GameStop Corp."},
+    {"symbol": "AMC", "name": "AMC Entertainment Holdings"},
+    {"symbol": "MU", "name": "Micron Technology Inc."},
+    {"symbol": "MCD", "name": "McDonald's Corporation"},
+    {"symbol": "MMM", "name": "3M Company"},
+    {"symbol": "MRK", "name": "Merck & Co. Inc."},
+    {"symbol": "MDT", "name": "Medtronic plc"},
+    {"symbol": "MET", "name": "MetLife Inc."},
+    {"symbol": "MELI", "name": "MercadoLibre Inc."},
+    {"symbol": "MRNA", "name": "Moderna Inc."},
+    {"symbol": "MDB", "name": "MongoDB Inc."},
+    {"symbol": "MDLZ", "name": "Mondelez International Inc."}
 ]
 
 @router.post("/initialize-popular")

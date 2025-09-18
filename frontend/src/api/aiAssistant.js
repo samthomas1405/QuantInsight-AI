@@ -24,9 +24,12 @@ api.interceptors.request.use(
   }
 );
 
-export const sendAIQuery = async (query) => {
+export const sendAIQuery = async (query, conversationHistory = []) => {
   try {
-    const response = await api.post('/ai-assistant/', { query });
+    const response = await api.post('/ai-assistant/', { 
+      query,
+      conversation_history: conversationHistory 
+    });
     return response.data;
   } catch (error) {
     console.error('Error sending AI query:', error);

@@ -229,19 +229,39 @@ def create_prediction_tasks(ticker: str, agents: Dict) -> List[Task]:
         strategy_synthesis_task = Task(
             description=f"""
             Based on the technical, fundamental, sentiment, and risk analyses provided, 
-            create a comprehensive investment recommendation for {ticker}:
+            create a comprehensive investment recommendation for {ticker}.
             
-            1. Clear BUY/HOLD/SELL recommendation
+            CRITICAL: Start your response with ONLY one of these exact phrases:
+            - "Recommendation: BUY"
+            - "Recommendation: HOLD"  
+            - "Recommendation: SELL"
+            
+            Determine your recommendation by evaluating ALL of these criteria:
+            
+            1. Technical indicators (price trends, volume, momentum, support/resistance)
+            2. Fundamental metrics (P/E ratio, earnings growth, revenue trends, margins)
+            3. Market sentiment (analyst ratings, news sentiment, social media buzz)
+            4. Competitive position (market share, moat, innovation pipeline)
+            5. Macroeconomic factors (sector trends, economic indicators, interest rates)
+            6. Risk factors (volatility, regulatory risks, execution risks)
+            7. Valuation (fair value vs current price, peer comparison)
+            8. Institutional activity (insider trading, fund holdings, volume patterns)
+            9. Growth catalysts (upcoming products, expansion plans, partnerships)
+            10. Financial health (debt levels, cash flow, balance sheet strength)
+            
+            After stating the recommendation, provide IN THIS ORDER:
+            1. Reasoning (2-3 sentences explaining the key factors driving this recommendation)
             2. Price targets (1-month, 3-month, 6-month)
             3. Key catalysts to watch
             4. Risk/reward ratio assessment
-            5. Position sizing and entry/exit strategy
+            5. Position sizing suggestion
             6. Timeline for reassessment
             
-            Synthesize all previous analyses into actionable guidance.
+            The reasoning should be concise and focus on the most compelling factors.
+            Do NOT explain confidence levels.
             Keep final recommendation under 250 words but be specific with targets and rationale.
             """,
-            expected_output=f"Comprehensive investment strategy for {ticker} with specific recommendations and price targets",
+            expected_output=f"Investment strategy for {ticker} starting with 'Recommendation: BUY/HOLD/SELL' followed by detailed analysis",
             agent=agents["strategy_synthesizer"],
             context=[market_analysis_task, fundamental_analysis_task, sentiment_analysis_task, risk_assessment_task]
         )

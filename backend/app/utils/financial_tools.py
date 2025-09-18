@@ -88,16 +88,42 @@ class FinancialTools:
                             price_source = "Previous Close"
                         
                         if current_price:
+                            # Calculate additional insights
+                            change = meta.get('regularMarketPrice', 0) - meta.get('previousClose', 0)
+                            change_pct = (change / meta.get('previousClose', 1)) * 100
+                            day_high = meta.get('regularMarketDayHigh', 0)
+                            day_low = meta.get('regularMarketDayLow', 0)
+                            day_range = day_high - day_low
+                            
+                            # Intraday position
+                            if day_range > 0:
+                                intraday_position = ((current_price - day_low) / day_range) * 100
+                                position_desc = "near daily low" if intraday_position < 25 else "lower half of range" if intraday_position < 45 else "mid-range" if intraday_position < 65 else "upper half of range" if intraday_position < 85 else "near daily high"
+                            else:
+                                position_desc = "minimal price movement"
+                            
+                            # Market status context
+                            market_status = "After Hours" if price_source == "After Hours" else "Pre Market" if price_source == "Pre Market" else "Regular Trading"
+                            
                             return f"""
-Stock: {symbol.upper()}
-Current Price: ${current_price:.2f}
-Change: ${meta.get('regularMarketPrice', 0) - meta.get('previousClose', 0):.2f} ({((meta.get('regularMarketPrice', 0) - meta.get('previousClose', 0)) / meta.get('previousClose', 1)) * 100:.2f}%)
-Day High: ${meta.get('regularMarketDayHigh', 0):.2f}
-Day Low: ${meta.get('regularMarketDayLow', 0):.2f}
-Open: ${meta.get('regularMarketOpen', 0):.2f}
-Previous Close: ${meta.get('previousClose', 0):.2f}
-Source: Yahoo Finance {price_source}
-Updated: {datetime.now().isoformat()}
+REAL-TIME STOCK DATA: {symbol.upper()}
+
+CURRENT PRICING:
+• Price: ${current_price:.2f} ({market_status})
+• Daily Change: ${change:+.2f} ({change_pct:+.2f}%)
+• Day Range: ${day_low:.2f} - ${day_high:.2f}
+• Current Position: Trading {position_desc} ({intraday_position:.1f}% of daily range)
+• Opening Price: ${meta.get('regularMarketOpen', 0):.2f}
+• Previous Close: ${meta.get('previousClose', 0):.2f}
+
+TRADING INSIGHTS:
+• Daily Range: ${day_range:.2f} ({(day_range/meta.get('previousClose', 1)*100):.1f}% volatility)
+• Price Source: Yahoo Finance ({price_source})
+• Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ET
+
+MARKET CONTEXT:
+• {"Strong positive movement" if change_pct > 3 else "Moderate gains" if change_pct > 1 else "Slight gains" if change_pct > 0 else "Flat" if abs(change_pct) < 0.1 else "Slight decline" if change_pct > -1 else "Moderate decline" if change_pct > -3 else "Significant decline"}
+• {"High intraday activity" if (day_range/meta.get('previousClose', 1)*100) > 2 else "Normal trading activity" if (day_range/meta.get('previousClose', 1)*100) > 0.5 else "Low volatility session"}
 """
             
             # Fallback to Finnhub if available
@@ -195,21 +221,56 @@ Updated: {datetime.now().isoformat()}
                                 meta = result['meta']
                                 current_price = meta.get('regularMarketPrice', prices_30d[-1])
                                 
+                                # Calculate additional metrics for comprehensive analysis
+                                current_vs_high = ((current_price - max_price) / max_price) * 100
+                                current_vs_low = ((current_price - min_price) / min_price) * 100
+                                current_vs_avg = ((current_price - avg_price) / avg_price) * 100
+                                
+                                # Volatility assessment
+                                volatility_pct = (volatility / avg_price) * 100
+                                volatility_level = "Low" if volatility_pct < 2 else "Moderate" if volatility_pct < 4 else "High"
+                                
+                                # Trend analysis (simple moving average slope)
+                                if len(prices_30d) >= 5:
+                                    recent_prices = prices_30d[-5:]  # Last 5 days
+                                    early_avg = sum(recent_prices[:3]) / 3
+                                    late_avg = sum(recent_prices[-3:]) / 3
+                                    short_term_trend = "Upward" if late_avg > early_avg * 1.01 else "Downward" if late_avg < early_avg * 0.99 else "Sideways"
+                                else:
+                                    short_term_trend = "Insufficient data"
+                                
+                                # Position relative to range
+                                range_position = ((current_price - min_price) / (max_price - min_price)) * 100
+                                position_desc = "Near Lows" if range_position < 25 else "Lower Half" if range_position < 45 else "Middle Range" if range_position < 65 else "Upper Half" if range_position < 85 else "Near Highs"
+                                
                                 return f"""
-Stock Analysis: {symbol.upper()}
+COMPREHENSIVE STOCK ANALYSIS: {symbol.upper()}
+
+CURRENT MARKET DATA:
 {price_info}
 
-30-Day Statistics:
-• 30-Day High: ${max_price:.2f}
-• 30-Day Low: ${min_price:.2f}
-• 30-Day Average: ${avg_price:.2f}
-• 30-Day Volatility: ${volatility:.2f}
-• 30-Day Return: {return_30d:.2f}%
+PERFORMANCE METRICS (30-Day Analysis):
+• Price Range: ${min_price:.2f} - ${max_price:.2f}
+• Current Position: {position_desc} ({range_position:.1f}% of range)
+• 30-Day Return: {return_30d:+.2f}%
+• Average Price: ${avg_price:.2f}
+• Volatility: ${volatility:.2f} ({volatility_level} - {volatility_pct:.1f}%)
 
-Current vs 30-Day:
-• vs High: {((current_price - max_price) / max_price) * 100:.2f}%
-• vs Low: {((current_price - min_price) / min_price) * 100:.2f}%
-• vs Average: {((current_price - avg_price) / avg_price) * 100:.2f}%
+TECHNICAL INDICATORS:
+• Short-term Trend: {short_term_trend}
+• Distance from High: {current_vs_high:+.2f}%
+• Distance from Low: {current_vs_low:+.2f}%
+• Distance from Average: {current_vs_avg:+.2f}%
+
+RISK ASSESSMENT:
+• Volatility Level: {volatility_level} ({volatility_pct:.1f}% daily volatility)
+• Range Position: Currently trading in {position_desc.lower()} of recent range
+• Recent Performance: {return_30d:+.2f}% over last 30 days
+
+MARKET CONTEXT:
+• Data includes regular trading hours, pre/post market activity
+• Analysis based on {len(prices_30d)} trading days of data
+• Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')} ET
 """
             
             return price_info

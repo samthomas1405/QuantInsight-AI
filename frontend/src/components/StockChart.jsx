@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { fetchStockHistory } from '../api/liveMarket';
+import React, { useEffect, useState, useRef } from 'react';
+import { fetchStockHistory, fetchStockQuote } from '../api/liveMarket';
+import CompanyLogo from './CompanyLogo';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Clock, Zap, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, BarChart3 } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -12,8 +13,7 @@ import {
   ResponsiveContainer,
   Area,
   AreaChart,
-  ReferenceLine,
-  Dot
+  ReferenceLine
 } from 'recharts';
 
 const StockChart = ({ symbol }) => {
@@ -21,32 +21,48 @@ const StockChart = ({ symbol }) => {
   const [latest, setLatest] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chartType, setChartType] = useState('area');
+  const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
   useEffect(() => {
     setLoading(true);
-    fetchStockHistory(symbol)
-      .then((data) => {
-        if (data && data.length > 0) {
-          const sorted = [...data].sort((a, b) => a.timestamp - b.timestamp);
+    
+    Promise.all([
+      fetchStockHistory(symbol),
+      fetchStockQuote(symbol)
+    ])
+      .then(([historyData, quoteData]) => {
+        if (historyData && historyData.length > 0) {
+          const sorted = [...historyData].sort((a, b) => a.timestamp - b.timestamp);
           setHistory(sorted);
           
-          const start = sorted[0].price;
-          const end = sorted[sorted.length - 1].price;
+          const currentPrice = sorted[sorted.length - 1].price;
           const high = Math.max(...sorted.map(d => d.high || d.price));
           const low = Math.min(...sorted.map(d => d.low || d.price));
           
+          let previousClose, delta, percent;
+          
+          if (quoteData && quoteData.previous_close) {
+            previousClose = quoteData.previous_close;
+            delta = currentPrice - previousClose;
+            percent = (delta / previousClose) * 100;
+          } else {
+            previousClose = sorted[0].price;
+            delta = currentPrice - previousClose;
+            percent = (delta / previousClose) * 100;
+          }
+          
           setLatest({
-            current: end,
-            delta: (end - start).toFixed(2),
-            percent: (((end - start) / start) * 100).toFixed(2),
-            high: high,
-            low: low,
-            avg: sorted.reduce((sum, d) => sum + d.price, 0) / sorted.length
+            current: currentPrice,
+            delta: delta.toFixed(2),
+            percent: percent.toFixed(2),
+            high: quoteData?.high || high,
+            low: quoteData?.low || low,
+            previousClose: previousClose
           });
         }
       })
       .catch(error => {
-        console.error('Error fetching stock history:', error);
+        console.error('Error fetching stock data:', error);
         setHistory([]);
         setLatest(null);
       })
@@ -55,390 +71,333 @@ const StockChart = ({ symbol }) => {
 
   const isPositive = latest && parseFloat(latest.delta) >= 0;
 
+  // Helper function to generate hourly ticks for the chart
+  const generateHourlyTicks = (data) => {
+    if (!data || data.length === 0) return [];
+    
+    const startTime = data[0].timestamp;
+    const endTime = data[data.length - 1].timestamp;
+    
+    // Get the start hour (9:30 becomes 10:00)
+    const startDate = new Date(startTime * 1000);
+    const startHour = startDate.getHours();
+    const startMinutes = startDate.getMinutes();
+    
+    // Start from the next full hour after market open
+    let firstTickHour = startMinutes >= 30 ? startHour + 1 : startHour;
+    const firstTickTime = new Date(startDate);
+    firstTickTime.setHours(firstTickHour, 0, 0, 0);
+    
+    const ticks = [];
+    let currentTick = Math.floor(firstTickTime.getTime() / 1000);
+    
+    // Generate hourly ticks
+    while (currentTick <= endTime) {
+      ticks.push(currentTick);
+      currentTick += 3600; // Add one hour
+    }
+    
+    // Always include market open (9:30)
+    const marketOpenTime = new Date(startDate);
+    marketOpenTime.setHours(9, 30, 0, 0);
+    const marketOpenTick = Math.floor(marketOpenTime.getTime() / 1000);
+    if (marketOpenTick >= startTime && !ticks.includes(marketOpenTick)) {
+      ticks.unshift(marketOpenTick);
+    }
+    
+    return ticks;
+  };
+
   const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const date = new Date(label * 1000);
-      return (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="glass-dark rounded-xl p-4 border border-[var(--dark-border-light)] shadow-2xl"
-        >
-          <p className="text-xs text-[var(--text-tertiary)] mb-1">
-            {date.toLocaleString()}
-          </p>
-          <p className="text-lg font-bold text-gradient-neon">
-            ${payload[0].value.toFixed(2)}
-          </p>
-        </motion.div>
-      );
-    }
-    return null;
+    if (!active || !payload || !payload.length) return null;
+
+    const price = payload[0].value;
+    const time = new Date(label * 1000);
+
+    return (
+      <div className={`${isDark ? 'bg-slate-800/95 border-slate-700' : 'bg-white border-gray-200'} backdrop-blur-sm border rounded-lg p-3 shadow-xl`}>
+        <p className={`text-xs mb-1 ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>
+          {time.toLocaleTimeString('en-US', { 
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true 
+          })}
+        </p>
+        <p className={`font-semibold text-lg ${isDark ? 'text-slate-100' : 'text-gray-900'}`}>
+          ${price.toFixed(2)}
+        </p>
+      </div>
+    );
   };
 
-  const CustomDot = (props) => {
-    const { cx, cy, index } = props;
-    if (index === history.length - 1) {
-      return (
-        <g>
-          <motion.circle
-            initial={{ r: 0 }}
-            animate={{ r: 8 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            cx={cx}
-            cy={cy}
-            fill={isPositive ? 'var(--accent-neon-green)' : 'var(--error)'}
-            stroke="var(--dark-bg)"
-            strokeWidth={2}
-          />
-          <motion.circle
-            animate={{ r: [8, 16, 8] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            cx={cx}
-            cy={cy}
-            fill="none"
-            stroke={isPositive ? 'var(--accent-neon-green)' : 'var(--error)'}
-            strokeWidth={2}
-            opacity={0.3}
-          />
-        </g>
-      );
-    }
-    return null;
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.8 }}
-      className="relative"
-    >
-      {/* Futuristic Background Effects */}
-      <div className="absolute inset-0 overflow-hidden rounded-2xl">
-        <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-[100px] opacity-20 animate-float ${
-          isPositive ? 'bg-gradient-to-br from-[var(--accent-neon-green)] to-[var(--accent-neon-cyan)]' : 'bg-gradient-to-br from-[var(--error)] to-[var(--accent-neon-pink)]'
-        }`} />
-        <div className={`absolute bottom-0 left-0 w-48 h-48 rounded-full blur-[80px] opacity-20 animate-float ${
-          isPositive ? 'bg-[var(--accent-neon-cyan)]' : 'bg-[var(--accent-neon-pink)]'
-        }`} style={{ animationDelay: '2s' }} />
+  const LoadingSkeleton = () => (
+    <div className="animate-pulse space-y-4">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className={`w-12 h-12 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-lg`}></div>
+          <div className={`h-8 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded w-24`}></div>
+        </div>
+        <div className="flex gap-2">
+          <div className={`w-16 h-8 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-full`}></div>
+          <div className={`w-16 h-8 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-full`}></div>
+        </div>
       </div>
       
-      <div className="relative z-10">
-        {/* Futuristic Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex-1">
-            <div className="flex items-center gap-4 mb-3">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                className={`p-3 rounded-xl shadow-lg ${
-                  isPositive 
-                    ? 'bg-gradient-to-br from-[var(--accent-neon-green)] to-[var(--accent-neon-cyan)]' 
-                    : 'bg-gradient-to-br from-[var(--error)] to-[var(--accent-neon-pink)]'
-                }`}
-              >
-                <Activity className="w-6 h-6 text-white" />
-              </motion.div>
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg p-4`}>
+            <div className={`h-4 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded w-16 mb-2`}></div>
+            <div className={`h-6 ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded w-20`}></div>
+          </div>
+        ))}
+      </div>
+      
+      <div className={`h-[400px] ${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg`}></div>
+    </div>
+  );
+
+  const EmptyState = () => (
+    <div className="flex flex-col items-center justify-center h-[400px] text-center">
+      <Activity className={`w-16 h-16 ${isDark ? 'text-slate-600' : 'text-gray-400'} mb-4`} />
+      <h3 className={`text-lg font-semibold ${isDark ? 'text-slate-300' : 'text-gray-700'} mb-2`}>No data available</h3>
+      <p className={`${isDark ? 'text-slate-500' : 'text-gray-500'}`}>Unable to load chart data for {symbol}</p>
+    </div>
+  );
+
+  return (
+    <div className={`${isDark ? 'bg-slate-800' : 'bg-white'} rounded-2xl p-6 shadow-lg border ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+      {loading ? (
+        <LoadingSkeleton />
+      ) : (
+        <>
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <CompanyLogo 
+                symbol={symbol}
+                size="md"
+                className="rounded-lg"
+              />
               <div>
-                <h3 className="text-2xl font-bold text-gradient-neon">
+                <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {symbol}
-                </h3>
-                <p className="text-xs text-[var(--text-tertiary)]">Real-time market data</p>
+                </h2>
+                {history.length > 0 && (
+                  <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                    {new Date(history[0].timestamp * 1000).toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    })} • Intraday
+                  </p>
+                )}
               </div>
             </div>
             
-            {latest && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className="glass rounded-xl p-3"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="w-4 h-4 text-[var(--accent-neon-purple)]" />
-                    <span className="text-xs text-[var(--text-tertiary)]">Current</span>
-                  </div>
-                  <p className="text-xl font-bold text-[var(--text-primary)]">
-                    ${latest.current.toFixed(2)}
-                  </p>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className={`glass rounded-xl p-3 border ${
-                    isPositive 
-                      ? 'border-[var(--success)]/30' 
-                      : 'border-[var(--error)]/30'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    {isPositive ? (
-                      <TrendingUp className="w-4 h-4 text-[var(--success)]" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-[var(--error)]" />
-                    )}
-                    <span className="text-xs text-[var(--text-tertiary)]">Change</span>
-                  </div>
-                  <p className={`text-xl font-bold ${
-                    isPositive ? 'text-[var(--success)]' : 'text-[var(--error)]'
-                  }`}>
-                    {isPositive ? '+' : ''}{latest.percent}%
-                  </p>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="glass rounded-xl p-3"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Zap className="w-4 h-4 text-[var(--accent-neon-cyan)]" />
-                    <span className="text-xs text-[var(--text-tertiary)]">High</span>
-                  </div>
-                  <p className="text-xl font-bold text-[var(--text-primary)]">
-                    ${latest.high.toFixed(2)}
-                  </p>
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="glass rounded-xl p-3"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <BarChart3 className="w-4 h-4 text-[var(--accent-neon-pink)]" />
-                    <span className="text-xs text-[var(--text-tertiary)]">Low</span>
-                  </div>
-                  <p className="text-xl font-bold text-[var(--text-primary)]">
-                    ${latest.low.toFixed(2)}
-                  </p>
-                </motion.div>
+            {/* Chart Type Toggle */}
+            <div className={`flex ${isDark ? 'bg-slate-700' : 'bg-gray-200'} rounded-full p-1`}>
+              <button
+                onClick={() => setChartType('area')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                  chartType === 'area'
+                    ? `${isPositive ? 'bg-green-600' : 'bg-red-600'} text-white`
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Area
+              </button>
+              <button
+                onClick={() => setChartType('line')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                  chartType === 'line'
+                    ? `${isPositive ? 'bg-green-600' : 'bg-red-600'} text-white`
+                    : isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Line
+              </button>
+            </div>
+          </div>
+
+          {/* KPIs */}
+          {latest && (
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg p-4`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className={`w-4 h-4 ${isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                  <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>Current</span>
+                </div>
+                <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  ${latest.current.toFixed(2)}
+                </p>
               </div>
+              
+              <div className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg p-4`}>
+                <div className="flex items-center gap-2 mb-1">
+                  {isPositive ? (
+                    <TrendingUp className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 text-red-400" />
+                  )}
+                  <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>Change</span>
+                </div>
+                <p className={`text-xl font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                  {isPositive ? '+' : ''}{latest.percent}%
+                </p>
+              </div>
+              
+              <div className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg p-4`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 className={`w-4 h-4 ${isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                  <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>High</span>
+                </div>
+                <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  ${latest.high.toFixed(2)}
+                </p>
+              </div>
+              
+              <div className={`${isDark ? 'bg-slate-700/50' : 'bg-gray-100'} rounded-lg p-4`}>
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 className={`w-4 h-4 ${isDark ? 'text-slate-400' : 'text-gray-500'}`} />
+                  <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-600'}`}>Low</span>
+                </div>
+                <p className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  ${latest.low.toFixed(2)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Chart */}
+          <div className="h-[400px]">
+            {history.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <AnimatePresence mode="wait">
+                {chartType === 'area' ? (
+                  <motion.div
+                    key="area-chart"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={history} margin={{ top: 10, right: 30, left: 0, bottom: 30 }}>
+                        <defs>
+                          <linearGradient id="colorGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor={isPositive ? '#10b981' : '#ef4444'} stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#e5e7eb"} vertical={false} />
+                        <XAxis
+                          dataKey="timestamp"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }}
+                          ticks={generateHourlyTicks(history)}
+                          domain={['dataMin', 'dataMax']}
+                          type="number"
+                          tickFormatter={(value) => {
+                            const date = new Date(value * 1000);
+                            const hours = date.getHours();
+                            const minutes = date.getMinutes();
+                            
+                            // Show 9:30 for market open, otherwise show hour only
+                            if (hours === 9 && minutes === 30) {
+                              return '9:30';
+                            }
+                            
+                            // Convert to 12-hour format
+                            const hour12 = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+                            const ampm = hours >= 12 ? 'pm' : 'am';
+                            return `${hour12}${ampm}`;
+                          }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }}
+                          tickFormatter={(value) => `$${value.toFixed(0)}`}
+                          domain={['dataMin - 1', 'dataMax + 1']}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: isDark ? '#475569' : '#d1d5db', strokeWidth: 1 }} />
+                        <Area
+                          type="monotone"
+                          dataKey="price"
+                          stroke={isPositive ? '#10b981' : '#ef4444'}
+                          strokeWidth={2}
+                          fill="url(#colorGradient)"
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="line-chart"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={history} margin={{ top: 10, right: 30, left: 0, bottom: 30 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#374151" : "#e5e7eb"} vertical={false} />
+                        <XAxis
+                          dataKey="timestamp"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }}
+                          ticks={generateHourlyTicks(history)}
+                          domain={['dataMin', 'dataMax']}
+                          type="number"
+                          tickFormatter={(value) => {
+                            const date = new Date(value * 1000);
+                            const hours = date.getHours();
+                            const minutes = date.getMinutes();
+                            
+                            // Show 9:30 for market open, otherwise show hour only
+                            if (hours === 9 && minutes === 30) {
+                              return '9:30';
+                            }
+                            
+                            // Convert to 12-hour format
+                            const hour12 = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+                            const ampm = hours >= 12 ? 'pm' : 'am';
+                            return `${hour12}${ampm}`;
+                          }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 12 }}
+                          tickFormatter={(value) => `$${value.toFixed(0)}`}
+                          domain={['dataMin - 1', 'dataMax + 1']}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: isDark ? '#475569' : '#d1d5db', strokeWidth: 1 }} />
+                        <Line
+                          type="monotone"
+                          dataKey="price"
+                          stroke={isPositive ? '#10b981' : '#ef4444'}
+                          strokeWidth={2.5}
+                          dot={false}
+                          isAnimationActive={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </div>
-          
-          {/* Chart Type Selector */}
-          <div className="flex gap-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setChartType('area')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                chartType === 'area' 
-                  ? 'bg-[var(--accent-neon-purple)] text-white' 
-                  : 'glass text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Area
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setChartType('line')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                chartType === 'line' 
-                  ? 'bg-[var(--accent-neon-purple)] text-white' 
-                  : 'glass text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Line
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <AnimatePresence mode="wait">
-          {loading ? (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="h-64 flex items-center justify-center"
-            >
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 mb-4">
-                  <div className="absolute w-16 h-16 border-4 border-[var(--accent-neon-purple)]/20 rounded-full"></div>
-                  <div className="absolute w-16 h-16 border-4 border-t-[var(--accent-neon-cyan)] rounded-full animate-spin"></div>
-                  <BarChart3 className="w-6 h-6 text-[var(--accent-neon-purple)]" />
-                </div>
-                <p className="text-sm text-[var(--text-secondary)]">Loading chart data...</p>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="chart"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.5 }}
-              className="h-80 -mx-4"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                {chartType === 'area' ? (
-                  <AreaChart data={history} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                    <defs>
-                      <linearGradient id={`${symbol}-area-gradient`} x1="0" y1="0" x2="0" y2="1">
-                        <stop 
-                          offset="0%" 
-                          stopColor={isPositive ? 'var(--accent-neon-cyan)' : 'var(--error)'} 
-                          stopOpacity={0.8}
-                        />
-                        <stop 
-                          offset="95%" 
-                          stopColor={isPositive ? 'var(--accent-neon-cyan)' : 'var(--error)'} 
-                          stopOpacity={0}
-                        />
-                      </linearGradient>
-                      <linearGradient id={`${symbol}-line-gradient`} x1="0" y1="0" x2="1" y2="0">
-                        <stop 
-                          offset="0%" 
-                          stopColor={isPositive ? 'var(--accent-neon-purple)' : 'var(--accent-neon-pink)'} 
-                          stopOpacity={0.8}
-                        />
-                        <stop 
-                          offset="100%" 
-                          stopColor={isPositive ? 'var(--accent-neon-cyan)' : 'var(--error)'} 
-                          stopOpacity={1}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      stroke="var(--dark-border)" 
-                      opacity={0.3}
-                    />
-                    <XAxis 
-                      dataKey="timestamp"
-                      stroke="var(--text-tertiary)"
-                      fontSize={10}
-                      tickFormatter={(value) => {
-                        const date = new Date(value * 1000);
-                        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                      }}
-                    />
-                    <YAxis 
-                      domain={['dataMin - 10', 'dataMax + 10']}
-                      stroke="var(--text-tertiary)"
-                      fontSize={10}
-                      tickFormatter={(value) => `$${value.toFixed(0)}`}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    {latest && (
-                      <ReferenceLine 
-                        y={latest.avg} 
-                        stroke="var(--accent-neon-purple)" 
-                        strokeDasharray="5 5" 
-                        opacity={0.5}
-                      />
-                    )}
-                    <Area
-                      type="monotone"
-                      dataKey="price"
-                      stroke={`url(#${symbol}-line-gradient)`}
-                      strokeWidth={3}
-                      fillOpacity={1}
-                      fill={`url(#${symbol}-area-gradient)`}
-                      dot={<CustomDot />}
-                    />
-                  </AreaChart>
-                ) : (
-                  <LineChart data={history} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
-                    <defs>
-                      <linearGradient id={`${symbol}-line-gradient-2`} x1="0" y1="0" x2="1" y2="0">
-                        <stop 
-                          offset="0%" 
-                          stopColor={isPositive ? 'var(--accent-neon-purple)' : 'var(--accent-neon-pink)'} 
-                          stopOpacity={0.8}
-                        />
-                        <stop 
-                          offset="100%" 
-                          stopColor={isPositive ? 'var(--accent-neon-cyan)' : 'var(--error)'} 
-                          stopOpacity={1}
-                        />
-                      </linearGradient>
-                      <filter id="glow">
-                        <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
-                        <feMerge>
-                          <feMergeNode in="coloredBlur"/>
-                          <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                      </filter>
-                    </defs>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      stroke="var(--dark-border)" 
-                      opacity={0.3}
-                    />
-                    <XAxis 
-                      dataKey="timestamp"
-                      stroke="var(--text-tertiary)"
-                      fontSize={10}
-                      tickFormatter={(value) => {
-                        const date = new Date(value * 1000);
-                        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                      }}
-                    />
-                    <YAxis 
-                      domain={['dataMin - 10', 'dataMax + 10']}
-                      stroke="var(--text-tertiary)"
-                      fontSize={10}
-                      tickFormatter={(value) => `$${value.toFixed(0)}`}
-                    />
-                    <Tooltip content={<CustomTooltip />} />
-                    {latest && (
-                      <ReferenceLine 
-                        y={latest.avg} 
-                        stroke="var(--accent-neon-purple)" 
-                        strokeDasharray="5 5" 
-                        opacity={0.5}
-                        label={{ value: "AVG", fill: "var(--text-tertiary)", fontSize: 10 }}
-                      />
-                    )}
-                    <Line
-                      type="monotone"
-                      dataKey="price"
-                      stroke={`url(#${symbol}-line-gradient-2)`}
-                      strokeWidth={4}
-                      dot={<CustomDot />}
-                      filter="url(#glow)"
-                    />
-                  </LineChart>
-                )}
-              </ResponsiveContainer>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        {/* Time Range Selector */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="flex items-center justify-center gap-2 mt-6"
-        >
-          {['1D', '1W', '1M', '3M', '1Y'].map((range, index) => (
-            <motion.button
-              key={range}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7 + index * 0.05 }}
-              className="px-4 py-2 glass hover:bg-white/10 rounded-lg text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all"
-            >
-              {range}
-            </motion.button>
-          ))}
-        </motion.div>
-      </div>
-    </motion.div>
+        </>
+      )}
+    </div>
   );
 };
 

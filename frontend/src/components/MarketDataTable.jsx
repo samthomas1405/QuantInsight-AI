@@ -283,7 +283,7 @@ const MarketDataTable = () => {
                           >
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <CompanyLogo symbol={stock.symbol} size="lg" />
+                                <CompanyLogo symbol={stock.symbol} size="md" />
                                 <div>
                                   <span className={`font-bold text-base ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                                     {stock.symbol}

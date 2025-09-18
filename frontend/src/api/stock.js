@@ -18,6 +18,14 @@ export const followStock = (symbol, token) => {
   });
 };
 
+export const unfollowStock = (symbol, token) => {
+  return axios.delete(`${API_URL}/user/stocks/${symbol}`, {
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+};
+
 export const completeUserSetup = (token) => {
   return axios.post(`${API_URL}/auth/complete-setup`, {}, {
     headers: {

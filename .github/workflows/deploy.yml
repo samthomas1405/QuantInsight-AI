@@ -1,0 +1,68 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_FRONTEND: quantinsight-frontend
+  ECR_REPOSITORY_BACKEND: quantinsight-backend
+  ECS_SERVICE_FRONTEND: quantinsight-frontend-service
+  ECS_SERVICE_BACKEND: quantinsight-backend-service
+  ECS_CLUSTER: quantinsight-cluster
+  ECS_TASK_DEFINITION_FRONTEND: quantinsight-frontend-task
+  ECS_TASK_DEFINITION_BACKEND: quantinsight-backend-task
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push frontend image to Amazon ECR
+      id: build-frontend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -f Dockerfile.frontend -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG"
+
+    - name: Build, tag, and push backend image to Amazon ECR
+      id: build-backend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -f Dockerfile.backend -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG"
+
+    - name: Update ECS service - Frontend
+      run: |
+        aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE_FRONTEND }} \
+          --force-new-deployment
+
+    - name: Update ECS service - Backend
+      run: |
+        aws ecs update-service --cluster ${{ env.ECS_CLUSTER }} \
+          --service ${{ env.ECS_SERVICE_BACKEND }} \
+          --force-new-deployment

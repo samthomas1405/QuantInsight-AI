@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { TrendingUp, Brain, MessageSquare, Mic, Home, Activity, Sparkles, Sun, Moon } from 'lucide-react';
+import { TrendingUp, Brain, MessageSquare, Mic, Home, Sparkles, Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import DashboardHome from '../components/DashboardHome';
-import MarketDataTable from '../components/MarketDataTable';
 import MultiAgentPredictorProfessional from '../components/MultiAgentPredictorProfessional';
-import SentimentAnalyzer from '../components/SentimentAnalyzer';
+import MarketImpactAnalyzer from '../components/MarketImpactAnalyzer';
 import AudioUploader from '../components/AudioUploader';
 import AIFinancialAssistant from '../components/AIFinancialAssistant';
 import UserAvatarMenu from '../components/UserAvatarMenu';
 import { fetchUserInfo } from '../api/auth';
-import QuantInsightLogo from '../components/QuantInsightLogo';
+import { QuantInsightLogoMark } from '../components/QuantInsightLogo';
+import WelcomeTour from '../components/WelcomeTour';
+import KeyboardShortcutsModal from '../components/KeyboardShortcutsModal';
+import useKeyboardShortcuts from '../hooks/useKeyboardShortcuts';
+import ProfileSettings from '../components/ProfileSettings';
 
 const TABS = [
   { 
@@ -21,13 +24,6 @@ const TABS = [
     component: <DashboardHome />,
     color: "from-indigo-500 to-purple-600",
     isHome: true
-  },
-  { 
-    path: "market-data",
-    label: "Live Market Data", 
-    icon: Activity, 
-    component: <MarketDataTable />,
-    color: "from-cyan-500 to-blue-600"
   },
   { 
     path: "predictor",
@@ -44,10 +40,10 @@ const TABS = [
     color: "from-amber-500 to-orange-600"
   },
   { 
-    path: "sentiment",
-    label: "Sentiment Analyzer", 
+    path: "market-impact",
+    label: "Market Impact", 
     icon: MessageSquare, 
-    component: <SentimentAnalyzer />,
+    component: <MarketImpactAnalyzer />,
     color: "from-purple-500 to-indigo-600"
   },
   { 
@@ -61,6 +57,8 @@ const TABS = [
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
+  const [showTour, setShowTour] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const navigate = useNavigate();
   const token = localStorage.getItem('token');
   const { isDark, toggleTheme } = useTheme();
@@ -71,13 +69,54 @@ const Dashboard = () => {
       return;
     }
     fetchUserInfo(token)
-      .then(res => setUser(res.data))
+      .then(res => {
+        setUser(res.data);
+        // Check if first-time user
+        const hasSeenTour = localStorage.getItem('hasSeenTour');
+        if (!hasSeenTour) {
+          setShowTour(true);
+        }
+      })
       .catch(() => {
         setUser(null);
         localStorage.removeItem('token');
         navigate('/login');
       });
   }, [token, navigate]);
+
+  // Set up keyboard shortcuts
+  const shortcuts = [
+    {
+      key: 'k',
+      ctrl: true,
+      handler: () => {
+        const searchInput = document.querySelector('[placeholder="Filter by ticker..."]');
+        if (searchInput) searchInput.focus();
+      }
+    },
+    {
+      key: 'g',
+      ctrl: true,
+      handler: () => navigate('/dashboard')
+    },
+    {
+      key: 'a',
+      ctrl: true,
+      handler: () => navigate('/select-stocks')
+    },
+    {
+      key: 'p',
+      ctrl: true,
+      handler: () => navigate('/dashboard/predictor')
+    },
+    {
+      key: '?',
+      shift: true,
+      handler: () => setShowShortcuts(true)
+    }
+  ];
+  
+  useKeyboardShortcuts(shortcuts);
 
   if (!user) {
     return (
@@ -115,7 +154,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center">
-              <QuantInsightLogo size="small" />
+              <QuantInsightLogoMark size={56} className="hover:scale-110 transition-all duration-200 cursor-pointer" />
             </div>
 
             {/* Navigation Links */}
@@ -126,6 +165,7 @@ const Dashboard = () => {
                   <NavLink
                     key={tab.path}
                     to={`/dashboard/${tab.path}`}
+                    data-tour={tab.path === '' ? 'portfolio-overview' : tab.path === 'predictor' ? 'multi-agent-predictor' : tab.path === 'ai-assistant' ? 'ai-assistant' : tab.path === 'sentiment' ? 'sentiment-analyzer' : null}
                     className={({ isActive }) => `
                       flex items-center gap-2 ${tab.isHome ? 'px-3' : 'px-4'} py-2 rounded-lg text-sm font-medium transition-all duration-200
                       ${isActive 
@@ -161,11 +201,13 @@ const Dashboard = () => {
               </button>
 
               {/* User Menu */}
-              <UserAvatarMenu
-                firstName={user.first_name}
-                lastName={user.last_name}
-                email={user.email}
-              />
+              <div data-tour="user-menu">
+                <UserAvatarMenu
+                  firstName={user.first_name}
+                  lastName={user.last_name}
+                  email={user.email}
+                />
+              </div>
             </div>
           </div>
 
@@ -205,14 +247,29 @@ const Dashboard = () => {
       <main className="content-area">
         <Routes>
           <Route path="/" element={<DashboardHome />} />
-          <Route path="/market-data" element={<MarketDataTable />} />
           <Route path="/predictor" element={<MultiAgentPredictorProfessional />} />
           <Route path="/ai-assistant" element={<AIFinancialAssistant />} />
-          <Route path="/sentiment" element={<SentimentAnalyzer />} />
+          <Route path="/market-impact" element={<MarketImpactAnalyzer />} />
           <Route path="/transcriber" element={<AudioUploader />} />
+          <Route path="/profile" element={<ProfileSettings />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </main>
+      
+      {/* Welcome Tour */}
+      {showTour && (
+        <WelcomeTour onComplete={() => {
+          setShowTour(false);
+          localStorage.setItem('hasSeenTour', 'true');
+        }} />
+      )}
+      
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal 
+        isOpen={showShortcuts} 
+        onClose={() => setShowShortcuts(false)} 
+        isDark={isDark}
+      />
     </div>
   );
 };

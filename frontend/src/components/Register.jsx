@@ -5,9 +5,10 @@ import { motion } from 'framer-motion';
 import { UserPlus, Eye, EyeOff, ArrowRight, CheckCircle, BarChart3, Shield, Zap } from 'lucide-react';
 import QuantInsightLogo from './QuantInsightLogo';
 import { registerUser } from '../api/auth';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function RegisterPage() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     first_name: '',
@@ -33,8 +34,12 @@ export default function RegisterPage() {
     
     try {
       await registerUser(formData);
-      setSuccess('Registration successful! You can now log in.');
+      setSuccess('Registration successful! Check your email for verification.');
       setError('');
+      // Redirect to verification page after 2 seconds
+      setTimeout(() => {
+        navigate('/verify-email', { state: { email: formData.email } });
+      }, 2000);
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed');
     } finally {
@@ -55,7 +60,12 @@ export default function RegisterPage() {
         {/* Content */}
         <div className="relative z-10">
           <div className="mb-8">
-            <QuantInsightLogo size="default" className="filter brightness-0 invert" animate={false} />
+            <div className="relative">
+              <div className="absolute inset-0 blur-2xl opacity-50">
+                <div className="h-full w-full bg-white rounded-full"></div>
+              </div>
+              <QuantInsightLogo size="large" animate={false} lightMode className="relative z-10" />
+            </div>
           </div>
           
           <div className="space-y-3">
@@ -166,7 +176,7 @@ export default function RegisterPage() {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8 text-center">
-            <QuantInsightLogo size="default" className="mx-auto" />
+            <QuantInsightLogo size="large" className="mx-auto" />
           </div>
 
           <div className="space-y-4 bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-gray-200/50">

@@ -8,11 +8,14 @@ import SummaryCard from './SummaryCard';
 import PortfolioRow from './PortfolioRow';
 import TopMovers from './TopMovers';
 import QuickLinks from './QuickLinks';
+import { PortfolioRowSkeleton, SummaryCardSkeleton } from './LoadingSkeleton';
+import { EmptyPortfolio } from './EmptyStates';
+import Tooltip from './Tooltip';
 
 const DashboardHome = () => {
   const [followedStocks, setFollowedStocks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState('symbol');
+  const [sortBy, setSortBy] = useState('name_asc');
   const [filterQuery, setFilterQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
@@ -38,7 +41,8 @@ const DashboardHome = () => {
       
       const stocksArray = stocksResponse ? Object.entries(stocksResponse).map(([symbol, data]) => ({
         symbol: symbol,
-        name: symbol,
+        name: data?.name || symbol,
+        sector: data?.sector || 'Stock',
         current_price: data?.price || 0,
         change: data?.change || 0,
         percent_change: data?.percent_change || 0,
@@ -46,6 +50,7 @@ const DashboardHome = () => {
         low: data?.low || 0,
         open: data?.open || 0,
         previous_close: data?.previous_close || 0,
+        volume: data?.volume || 0,
         last_updated: data?.last_updated || new Date().toISOString(),
       })) : [];
       
@@ -90,12 +95,18 @@ const DashboardHome = () => {
     // Apply sort
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
-        case 'symbol':
+        case 'name_asc':
           return a.symbol.localeCompare(b.symbol);
-        case 'price':
+        case 'name_desc':
+          return b.symbol.localeCompare(a.symbol);
+        case 'price_high':
           return b.current_price - a.current_price;
-        case 'change':
+        case 'price_low':
+          return a.current_price - b.current_price;
+        case 'change_high':
           return b.percent_change - a.percent_change;
+        case 'change_low':
+          return a.percent_change - b.percent_change;
         default:
           return 0;
       }
@@ -106,12 +117,57 @@ const DashboardHome = () => {
 
   if (loading) {
     return (
-      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'} flex items-center justify-center`}>
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full"
-        />
+      <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          <div className="max-w-7xl mx-auto">
+            {/* Header Skeleton */}
+            <div className="mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <SummaryCardSkeleton className="h-8 w-64 mb-2" />
+                  <SummaryCardSkeleton className="h-4 w-48" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <SummaryCardSkeleton className="h-10 w-10 rounded-lg" />
+                  <SummaryCardSkeleton className="h-10 w-28 rounded-lg" />
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Cards Skeleton */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mb-8">
+              <SummaryCardSkeleton />
+              <SummaryCardSkeleton />
+            </div>
+
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Portfolio List Skeleton */}
+              <div className="lg:col-span-2">
+                <div className={`p-6 rounded-xl border ${isDark ? 'bg-gray-800/30 border-gray-700/50' : 'bg-white border-gray-100'}`}>
+                  <div className="flex justify-between items-center mb-4">
+                    <SummaryCardSkeleton className="h-6 w-32" />
+                    <div className="flex gap-3">
+                      <SummaryCardSkeleton className="h-10 w-48 rounded-lg" />
+                      <SummaryCardSkeleton className="h-10 w-32 rounded-lg" />
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <PortfolioRowSkeleton key={i} isDark={isDark} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Side Panels Skeleton */}
+              <div className="space-y-6">
+                <SummaryCardSkeleton className="h-64" />
+                <SummaryCardSkeleton className="h-48" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -121,7 +177,7 @@ const DashboardHome = () => {
       <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="max-w-7xl mx-auto">
           {/* Page Header */}
-          <div className="mb-8">
+          <div className="mb-8" data-tour="portfolio-overview">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className={`text-2xl lg:text-3xl font-bold ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
@@ -135,12 +191,14 @@ const DashboardHome = () => {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={loadDashboardData}
-                  disabled={isRefreshing}
-                  className={`
+                <Tooltip content="Refresh data" position="bottom">
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={loadDashboardData}
+                    disabled={isRefreshing}
+                    aria-label="Refresh data"
+                    className={`
                     p-2.5 rounded-lg transition-all duration-200
                     ${isDark 
                       ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-200' 
@@ -148,13 +206,15 @@ const DashboardHome = () => {
                     }
                     ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}
                   `}
-                >
-                  <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
-                </motion.button>
+                  >
+                    <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  </motion.button>
+                </Tooltip>
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => navigate('/select-stocks')}
+                  data-tour="add-stocks"
                   className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
@@ -225,7 +285,8 @@ const DashboardHome = () => {
                     </div>
 
                     {/* Sort Dropdown */}
-                    <div className="relative">
+                    <Tooltip content="Sort your portfolio" position="top">
+                      <div className="relative">
                       <select
                         value={sortBy}
                         onChange={(e) => setSortBy(e.target.value)}
@@ -238,25 +299,33 @@ const DashboardHome = () => {
                           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                         `}
                       >
-                        <option value="symbol">Sort by Name</option>
-                        <option value="price">Sort by Price</option>
-                        <option value="change">Sort by Change</option>
+                        <option value="name_asc">Name (A-Z)</option>
+                        <option value="name_desc">Name (Z-A)</option>
+                        <option value="price_high">Price (High to Low)</option>
+                        <option value="price_low">Price (Low to High)</option>
+                        <option value="change_high">% Change (High to Low)</option>
+                        <option value="change_low">% Change (Low to High)</option>
                       </select>
                       <ChevronDown className={`
                         absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none
                         ${isDark ? 'text-gray-500' : 'text-gray-400'}
                       `} />
-                    </div>
+                      </div>
+                    </Tooltip>
                   </div>
                 </div>
 
                 {/* Portfolio Rows */}
                 {processedStocks.length === 0 ? (
-                  <EmptyState 
-                    isDark={isDark} 
-                    hasStocks={followedStocks.length > 0}
-                    onAddStocks={() => navigate('/select-stocks')}
-                  />
+                  followedStocks.length > 0 ? (
+                    <EmptyState 
+                      isDark={isDark} 
+                      hasStocks={true}
+                      onAddStocks={() => navigate('/select-stocks')}
+                    />
+                  ) : (
+                    <EmptyPortfolio onAddStocks={() => navigate('/select-stocks')} />
+                  )
                 ) : (
                   <div className="space-y-4">
                     {processedStocks.map((stock, index) => (
@@ -265,6 +334,9 @@ const DashboardHome = () => {
                         stock={stock}
                         isDark={isDark}
                         index={index}
+                        onDelete={(symbol) => {
+                          setFollowedStocks(prev => prev.filter(s => s.symbol !== symbol));
+                        }}
                       />
                     ))}
                   </div>

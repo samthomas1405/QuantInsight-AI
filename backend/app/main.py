@@ -2,7 +2,9 @@ from fastapi import FastAPI
 import os
 import debugpy
 from app.db import Base, engine
-from app.routes import market_data, news, sentiment, audio, live_market, auth, user_stocks, ai_assistant
+# Import all models to ensure they're registered with SQLAlchemy
+from app.models import User, Stock, VerificationCode, AnalysisHistory
+from app.routes import news, sentiment, audio, auth, user_stocks, ai_assistant, auth_v2, analysis_history, news_comparison, market_impact
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -20,26 +22,23 @@ app.add_middleware(
 )
 
 # Include Routers
-app.include_router(market_data.router, prefix="/market-data", tags=["Market Data"])
 app.include_router(news.router, prefix="/news")
 app.include_router(sentiment.router, prefix="/sentiment", tags=["Sentiment"])
+app.include_router(market_impact.router, prefix="/market-impact", tags=["Market Impact"])
 app.include_router(audio.router, prefix="/audio", tags=["Audio"])
-app.include_router(live_market.router)
 app.include_router(auth.router)
+app.include_router(auth_v2.router)  # New auth routes with email verification
 app.include_router(user_stocks.router)
 app.include_router(ai_assistant.router)
+app.include_router(analysis_history.router, prefix="/api", tags=["Analysis History"])
+app.include_router(news_comparison.router, prefix="/news", tags=["Stock Comparison"])
 
 # Import and include additional market routers
-from app.routes import live_market_simple, live_market_alpha, live_market_polygon, live_market_finnhub
-app.include_router(live_market_simple.router)
+from app.routes import live_market_alpha, live_market_finnhub, live_market_alpaca
 app.include_router(live_market_alpha.router)
-app.include_router(live_market_polygon.router)
 app.include_router(live_market_finnhub.router)
+app.include_router(live_market_alpaca.router)
 
-# Commenting out the new routers that are causing issues
-# from app.routes import market_optimized, market_free
-# app.include_router(market_optimized.router)
-# app.include_router(market_free.router)
 
 # Root Endpoint
 @app.get("/")

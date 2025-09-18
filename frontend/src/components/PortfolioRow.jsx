@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowDownRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowDownRight, LineChart, BarChart3, X, Trash2 } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
+import StockChart from './StockChart';
+import { unfollowStock } from '../api/stock';
 
 const PortfolioRow = ({
   stock,
   isDark = false,
-  index = 0
+  index = 0,
+  onDelete
 }) => {
   const [previousPrice, setPreviousPrice] = useState(stock.current_price);
   const [isPriceUpdating, setIsPriceUpdating] = useState(false);
+  const [showChart, setShowChart] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (stock.current_price !== previousPrice) {
@@ -55,6 +61,24 @@ const PortfolioRow = ({
     });
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('token');
+      await unfollowStock(stock.symbol, token);
+      setShowDeleteConfirm(false);
+      if (onDelete) {
+        onDelete(stock.symbol);
+      }
+    } catch (error) {
+      console.error('Failed to delete stock:', error);
+      alert('Failed to delete stock. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -78,18 +102,9 @@ const PortfolioRow = ({
               <h3 className={`font-semibold text-lg ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
                 {stock.symbol}
               </h3>
-              {!changeData.isPositive && (
-                <span className={`
-                  inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium
-                  bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400
-                `}>
-                  <ArrowDownRight className="w-3 h-3" />
-                  Loser
-                </span>
-              )}
             </div>
             <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Technology Stock
+              {stock.sector || 'Stock'}
             </p>
           </div>
         </div>
@@ -106,8 +121,8 @@ const PortfolioRow = ({
         </div>
       </div>
 
-      {/* Day Range */}
-      <div className={`space-y-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      {/* Day Range and Stats */}
+      <div className={`space-y-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
         <div className="flex justify-between text-sm">
           <span>Day Range</span>
           <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -131,7 +146,147 @@ const PortfolioRow = ({
             {formatPrice(dayHigh)}
           </span>
         </div>
+        
+        {/* Actions Row */}
+        <div className="flex items-center justify-between pt-2 border-t ${isDark ? 'border-gray-700' : 'border-gray-100'}">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(true);
+            }}
+            className={`
+              px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+              flex items-center gap-2
+              ${isDark 
+                ? 'bg-gray-700 hover:bg-red-900/30 text-gray-400 hover:text-red-400' 
+                : 'bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600'
+              }
+            `}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowChart(true);
+            }}
+            className={`
+              px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+              flex items-center gap-2
+              ${isDark 
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }
+            `}
+          >
+            <LineChart className="w-4 h-4" />
+            View Chart
+          </motion.button>
+        </div>
       </div>
+      
+      {/* Chart Modal */}
+      <AnimatePresence>
+        {showChart && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowChart(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="max-w-4xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <motion.button
+                  whileHover={{ scale: 1.1, rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowChart(false)}
+                  className={`absolute -top-2 -right-2 z-10 p-2 ${isDark ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-white hover:bg-gray-100 text-gray-700'} rounded-full shadow-lg transition-colors`}
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
+                <StockChart symbol={stock.symbol} />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-xl p-6 max-w-sm w-full shadow-2xl`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className={`text-lg font-semibold mb-2 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+                Delete {stock.symbol}?
+              </h3>
+              <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                Are you sure you want to remove {stock.name || stock.symbol} from your portfolio? This action cannot be undone.
+              </p>
+              
+              <div className="flex gap-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                  className={`
+                    flex-1 px-4 py-2 rounded-lg font-medium transition-colors
+                    ${isDark 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                    }
+                    ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  Cancel
+                </motion.button>
+                
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className={`
+                    flex-1 px-4 py-2 rounded-lg font-medium transition-colors
+                    ${isDark 
+                      ? 'bg-red-600 hover:bg-red-700 text-white' 
+                      : 'bg-red-600 hover:bg-red-700 text-white'
+                    }
+                    ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

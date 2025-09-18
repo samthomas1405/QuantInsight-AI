@@ -11,7 +11,7 @@ from app.models.user import User
 # Config
 SECRET_KEY = os.getenv("SECRET_KEY")  # Use env var in production!
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

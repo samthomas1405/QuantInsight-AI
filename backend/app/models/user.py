@@ -21,4 +21,7 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     followed_stocks = relationship("Stock", secondary="user_stocks", back_populates="followers")
     has_completed_setup = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=False)
+    verified_at = Column(DateTime, nullable=True)
+    analysis_history = relationship("AnalysisHistory", back_populates="user", cascade="all, delete-orphan")
 

@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { motion } from 'framer-motion';
 import { LogIn, Eye, EyeOff, TrendingUp, Activity } from 'lucide-react';
 import QuantInsightLogo, { QuantInsightLogoMark } from './QuantInsightLogo';
-import { loginUser, fetchUserInfo } from '../api/auth';
-import { useNavigate } from 'react-router-dom';
+import { fetchUserInfo } from '../api/auth';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage({ setToken }) {
   const [email, setEmail] = useState('');
@@ -14,6 +15,15 @@ export default function LoginPage({ setToken }) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  
+  // Show message from location state (e.g., session expired)
+  useEffect(() => {
+    if (location.state?.message) {
+      setError(location.state.message);
+    }
+  }, [location]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,18 +31,26 @@ export default function LoginPage({ setToken }) {
     setError('');
 
     try {
-      const response = await loginUser({ email, password });
-      const token = response.data.access_token;
-      localStorage.setItem('token', token);
-      setToken(token);
+      const result = await login({ email, password });
+      
+      if (result.success) {
+        const token = localStorage.getItem('token');
+        setToken(token);
 
-      const profileRes = await fetchUserInfo(token);
-      const hasCompletedSetup = profileRes.data.has_completed_setup;
+        const profileRes = await fetchUserInfo(token);
+        const hasCompletedSetup = profileRes.data.has_completed_setup;
 
-      if (hasCompletedSetup) navigate('/dashboard');
-      else navigate('/select-stocks');
-    } catch {
-      setError('Invalid credentials. Try demo@example.com / password');
+        if (hasCompletedSetup) navigate('/dashboard');
+        else navigate('/select-stocks');
+      } else {
+        setError(result.error);
+      }
+    } catch (err) {
+      if (err.response?.data?.detail?.includes('verify your email')) {
+        setError('Please verify your email before logging in. Check your inbox for the verification code.');
+      } else {
+        setError(err.response?.data?.detail || 'Invalid credentials. Try demo@example.com / password');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,7 +69,12 @@ export default function LoginPage({ setToken }) {
         {/* Content */}
         <div className="relative z-10">
           <div className="mb-16">
-            <QuantInsightLogo size="large" className="filter brightness-0 invert" animate={false} />
+            <div className="relative">
+              <div className="absolute inset-0 blur-2xl opacity-50">
+                <div className="h-full w-full bg-white rounded-full"></div>
+              </div>
+              <QuantInsightLogo size="large" animate={false} lightMode className="relative z-10" />
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -152,7 +175,7 @@ export default function LoginPage({ setToken }) {
           </div>
           <div className="text-center">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-lg flex items-center justify-center mx-auto mb-2">
-              <QuantInsightLogoMark size={24} className="filter brightness-0 invert" />
+              <QuantInsightLogoMark size={24} />
             </div>
             <p className="text-sm text-blue-100">AI Predictions</p>
           </div>
@@ -175,7 +198,7 @@ export default function LoginPage({ setToken }) {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden mb-8 text-center">
-            <QuantInsightLogo size="default" className="mx-auto" />
+            <QuantInsightLogo size="large" className="mx-auto" />
           </div>
 
           <div className="space-y-4 bg-white/80 backdrop-blur-lg rounded-2xl p-8 shadow-xl border border-gray-200/50">
@@ -224,6 +247,7 @@ export default function LoginPage({ setToken }) {
                   </button>
                 </div>
               </div>
+
 
               {error && (
                 <motion.div
