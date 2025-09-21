@@ -1,3 +1,5 @@
+import API_BASE_URL from './config';
+
 /* eslint-disable no-restricted-globals */
 // Web Worker for Multi-Agent Analysis
 // This worker handles the analysis requests in the background
@@ -78,7 +80,7 @@ async function runAnalysis({ tickers, token, analysisId, mode = 'analyze' }) {
     
     if (mode === 'compare') {
       // For comparison mode, send all tickers at once
-      const url = new URL('http://localhost:8000/news/comparison/compare');
+      const url = new URL(`${API_BASE_URL}/news/comparison/compare`);
       
       const response = await fetch(url.toString(), {
         method: 'POST',
@@ -129,7 +131,7 @@ async function runAnalysis({ tickers, token, analysisId, mode = 'analyze' }) {
       // Original analyze mode - analyze each ticker separately
       const promises = tickers.map(async (ticker) => {
         try {
-          const url = new URL('http://localhost:8000/news/custom-summary');
+          const url = new URL(`${API_BASE_URL}/news/custom-summary`);
           url.searchParams.append('tickers', ticker);
           
           const response = await fetch(url.toString(), {

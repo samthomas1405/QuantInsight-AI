@@ -12,10 +12,13 @@ app = FastAPI()
 # Initialize DB
 Base.metadata.create_all(bind=engine)
 
+# Get allowed origins from environment variable
+allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,3 +47,8 @@ app.include_router(live_market_alpaca.router)
 @app.get("/")
 def read_root():
     return {"message": "QuantInsight AI Backend is running!"}
+
+# Health Check Endpoint for Render
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "quantinsight-backend"}

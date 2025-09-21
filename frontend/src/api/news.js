@@ -1,6 +1,8 @@
+import API_BASE_URL from './config';
+
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000';
+;
 
 // Create axios instance with token interceptor
 const api = axios.create({
@@ -50,7 +52,7 @@ export const fetchStockNews = async (symbol) => {
 };
 
 // Original functions for NewsFeed.jsx compatibility
-const API_URL = 'http://127.0.0.1:8000/news/custom-summary';
+const API_URL = `${API_BASE_URL}/news/custom-summary`;
 
 export const getReports = async (userToken, selectedTickers = null) => {
   try {

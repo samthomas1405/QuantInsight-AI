@@ -1,6 +1,8 @@
+import API_BASE_URL from './config';
+
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/sentiment/';
+const API_URL = `${API_BASE_URL}/sentiment/`;
 
 export const analyzeSentiment = async (payload) => {
   try {

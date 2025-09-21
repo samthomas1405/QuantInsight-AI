@@ -1,13 +1,15 @@
+import API_BASE_URL from './config';
+
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000/market-live';
-const SIMPLE_API_URL = 'http://127.0.0.1:8000/market-simple';
-const ALPHA_API_URL = 'http://127.0.0.1:8000/market-alpha';
-const POLYGON_API_URL = 'http://127.0.0.1:8000/market-polygon';
-const FREE_API_URL = 'http://127.0.0.1:8000/market-free';
-const OPTIMIZED_API_URL = 'http://127.0.0.1:8000/market';
-const FINNHUB_API_URL = 'http://127.0.0.1:8000/market-finnhub';
-const ALPACA_API_URL = 'http://127.0.0.1:8000/market-alpaca';
+const API_URL = `${API_BASE_URL}/market-live`;
+const SIMPLE_API_URL = `${API_BASE_URL}/market-simple`;
+const ALPHA_API_URL = `${API_BASE_URL}/market-alpha`;
+const POLYGON_API_URL = `${API_BASE_URL}/market-polygon`;
+const FREE_API_URL = `${API_BASE_URL}/market-free`;
+const OPTIMIZED_API_URL = `${API_BASE_URL}/market`;
+const FINNHUB_API_URL = `${API_BASE_URL}/market-finnhub`;
+const ALPACA_API_URL = `${API_BASE_URL}/market-alpaca`;
 
 // Add request/response interceptors for debugging
 axios.interceptors.request.use(
