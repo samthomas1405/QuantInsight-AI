@@ -1,6 +1,6 @@
-import API_BASE_URL from './config';
-
 /* eslint-disable no-restricted-globals */
+// Get API base URL from environment or use localhost as fallback
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 // Web Worker for Multi-Agent Analysis
 // This worker handles the analysis requests in the background
 
