@@ -34,9 +34,9 @@ services:
       - key: SENDGRID_FROM_EMAIL
         sync: false
       - key: FRONTEND_URL
-        value: https://quantinsight-ai.vercel.app
+        value: https://frontend-ms08zzn6l-samthomas1405-4688s-projects.vercel.app
       - key: CORS_ORIGINS
-        value: https://quantinsight-ai.vercel.app,https://localhost:3000
+        value: https://frontend-ms08zzn6l-samthomas1405-4688s-projects.vercel.app,https://frontend-samthomas1405-4688s-projects.vercel.app,http://localhost:3000
     healthCheckPath: /health
     autoDeploy: true
 
