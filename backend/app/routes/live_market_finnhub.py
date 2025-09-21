@@ -17,9 +17,9 @@ from datetime import datetime, timedelta
 import logging
 from functools import lru_cache
 import threading
-import redis
 import json
 import random
+from app.utils.cache import get_cache, set_cache, make_cache_key, CACHE_ENABLED
 
 logger = logging.getLogger(__name__)
 
@@ -38,39 +38,26 @@ else:
     except Exception as e:
         logger.error(f"Failed to initialize Finnhub client: {e}")
         finnhub_client = None
-
-# Redis configuration
-redis_client = None
-try:
-    redis_client = redis.Redis(
-        host=os.getenv('REDIS_HOST', 'localhost'),
-        port=int(os.getenv('REDIS_PORT', 6379)),
-        decode_responses=True
-    )
-    redis_client.ping()
-    logger.info("Redis connection established for Finnhub")
-except Exception as e:
-    logger.warning(f"Redis not available, using in-memory cache: {e}")
-    # Fallback to in-memory cache
-    memory_cache = {}
-    cache_lock = threading.Lock()
+# Fallback to in-memory cache if Upstash not available
+memory_cache = {}
+cache_lock = threading.Lock()
 
 CACHE_TTL = 60  # Cache for 60 seconds
 
 def get_cached_or_fetch(key: str, fetch_func, *args, **kwargs):
-    """Get data from cache or fetch if expired - Redis with fallback"""
+    """Get data from cache or fetch if expired - Upstash with fallback"""
     try:
-        if redis_client:
-            # Try Redis first
-            cached_data = redis_client.get(key)
+        # Try Upstash first
+        if CACHE_ENABLED:
+            cached_data = get_cache(key)
             if cached_data:
-                return json.loads(cached_data)
+                return cached_data
             
             # Fetch new data
             data = fetch_func(*args, **kwargs)
             if data is not None:
-                # Store in Redis with TTL
-                redis_client.setex(key, CACHE_TTL, json.dumps(data))
+                # Store in Upstash with TTL
+                set_cache(key, data, CACHE_TTL)
             return data
         else:
             # Fallback to in-memory cache
@@ -223,8 +210,8 @@ def get_finnhub_quote(symbol: str) -> Optional[Dict]:
                 
                 # Cache the volume if found
                 if volume_found and volume > 0:
-                    if redis_client:
-                        redis_client.setex(volume_cache_key, 300, str(volume))
+                    if CACHE_ENABLED:
+                        set_cache(volume_cache_key, volume, 300)
                     elif 'memory_cache' in globals():
                         with cache_lock:
                             memory_cache[volume_cache_key] = (volume, time.time())
@@ -722,30 +709,13 @@ def search_symbols(query: str):
 def get_cache_stats():
     """Get cache statistics to monitor efficiency"""
     try:
-        if redis_client:
-            # Redis stats
-            info = redis_client.info()
-            dbsize = redis_client.dbsize()
-            
-            # Count Finnhub-specific keys
-            finnhub_keys = 0
-            for key in redis_client.scan_iter("stock_*"):
-                finnhub_keys += 1
-            for key in redis_client.scan_iter("profile_*"):
-                finnhub_keys += 1
-            for key in redis_client.scan_iter("financials_*"):
-                finnhub_keys += 1
-                
+        if CACHE_ENABLED:
+            # Upstash stats
             return {
-                "cache_type": "Redis",
+                "cache_type": "Upstash Redis",
                 "status": "Connected",
-                "total_keys": dbsize,
-                "finnhub_keys": finnhub_keys,
-                "memory_used": info.get('used_memory_human', 'N/A'),
-                "hit_rate": round(info.get('keyspace_hits', 0) / max(info.get('keyspace_hits', 0) + info.get('keyspace_misses', 1), 1) * 100, 2),
-                "uptime": info.get('uptime_in_seconds', 0),
                 "cache_ttl": CACHE_TTL,
-                "efficiency_tip": "Redis cache is shared across all workers, reducing API calls significantly"
+                "efficiency_tip": "Upstash cache is serverless and scales automatically"
             }
         else:
             # In-memory stats
