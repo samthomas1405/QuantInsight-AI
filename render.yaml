@@ -40,16 +40,15 @@ services:
     healthCheckPath: /health
     autoDeploy: true
 
+  # Redis Cache (Optional - comment out if not needed)
+  - type: redis
+    name: quantinsight-redis
+    plan: free
+    ipAllowList: []
+
 databases:
   # PostgreSQL Database
   - name: quantinsight-db
     plan: free
     databaseName: quantinsight
     user: quantinsight
-
-services:
-  # Redis Cache (Optional - comment out if not needed)
-  - type: redis
-    name: quantinsight-redis
-    plan: free
-    ipAllowList: []
